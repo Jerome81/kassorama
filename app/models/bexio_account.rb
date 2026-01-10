@@ -1,0 +1,2 @@
+class BexioAccount < ApplicationRecord
+end

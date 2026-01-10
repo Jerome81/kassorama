@@ -1,0 +1,8 @@
+en:
+  number:
+    currency:
+      format:
+        unit: ""
+        delimiter: "'"
+        separator: "."
+        format: "%n"

@@ -1,0 +1,39 @@
+<div class="w-full">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-lg inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <div class="flex justify-between items-center mb-8 gap-4">
+    <h1 class="font-bold text-4xl text-[#2C2C2C]">Kassen</h1>
+    <%= link_to "Neue Kasse", new_cash_register_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold hover:bg-yellow-400 transition" %>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <% @cash_registers.each do |cash_register| %>
+      <% is_inactive = cash_register.status != 'active' %>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative hover:shadow-md transition cursor-pointer <%= is_inactive ? 'border-l-8 border-l-gray-300 opacity-75 bg-gray-50' : 'border-l-8 border-l-green-500' %>" onclick="window.location='<%= is_inactive ? edit_cash_register_path(cash_register) : pos_path(cash_register) %>'">
+        
+        <!-- Edit Button (Top Right) -->
+        <%= link_to edit_cash_register_path(cash_register), class: "absolute top-4 right-4 text-gray-400 hover:text-[#FFD100] transition z-10", onclick: "event.stopPropagation();" do %>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+          </svg>
+        <% end %>
+
+        <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-2 truncate pr-6"><%= cash_register.name %></h2>
+            <p class="text-gray-500 font-medium <%= is_inactive ? 'mb-4' : 'mb-1' %>">Bargeld: <span class="<%= is_inactive ? 'text-gray-500' : 'text-gray-900 font-bold' %>"><%= number_to_currency(cash_register.amount || 0, unit: 'CHF') %></span></p>
+
+            <% if !is_inactive %>
+              <p class="text-gray-500 font-medium mb-1">Umsatz heute: <span class="text-gray-900 font-bold"><%= number_to_currency(@sales_today[cash_register.id] || 0, unit: 'CHF') %></span></p>
+              <p class="text-gray-500 font-medium mb-4">Umsatz gestern: <span class="text-gray-900 font-bold"><%= number_to_currency(@sales_yesterday[cash_register.id] || 0, unit: 'CHF') %></span></p>
+            <% end %>
+            
+            <span class="<%= is_inactive ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700' %> text-xs font-bold px-2 py-1 rounded inline-block">
+                <%= cash_register.status.capitalize %>
+            </span>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

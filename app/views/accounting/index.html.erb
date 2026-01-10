@@ -1,0 +1,215 @@
+<div class="mx-auto max-w-7xl px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-[#2C2C2C]">Verbuchen</h1>
+    <div class="flex space-x-2">
+    </div>
+  </div>
+
+  <% if @orders_by_day.empty? %>
+    <p class="text-gray-500">Keine offenen Bestellungen zum Verbuchen.</p>
+  <% else %>
+    <div class="space-y-8">
+      <% @orders_by_day.each do |date, orders| %>
+        <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+          <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-lg font-bold text-gray-700">
+              <%= date.strftime("%d.%m.%Y") %>
+            </h2>
+            <%= button_to "Buchungen erstellen", accounting_create_booking_path(date: date), method: :post, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition" %>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider w-24">Zeit</th>
+                  
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">8.1 (Cash)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">2.6 (Cash)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">Gutsch. (Cash)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">Trinkg. (Cash)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">Riddle (Cash)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-yellow-50">Poker (Cash)</th>
+                  
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-blue-50">8.1 (Credit)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-blue-50">2.6 (Credit)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-blue-50">Gutsch. (Credit)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-blue-50">Trinkg. (Credit)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-blue-50">Riddle (Credit)</th>
+                  <th scope="col" class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider bg-blue-50">Poker (Credit)</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <% 
+                   day_total_cash_8_1 = 0
+                   day_total_cash_2_6 = 0
+                   day_total_cash_vouchers = 0
+                   day_total_cash_tip = 0
+                   day_total_cash_riddle = 0
+                   day_total_cash_poker = 0
+                   
+                   day_total_credit_8_1 = 0
+                   day_total_credit_2_6 = 0
+                   day_total_credit_vouchers = 0
+                   day_total_credit_tip = 0
+                   day_total_credit_riddle = 0
+                   day_total_credit_poker = 0
+                %>
+                <% orders.each do |order| %>
+                  <%
+                     # Calculate totals
+                     total_8_1 = 0
+                     total_2_6 = 0
+                     total_vouchers = 0
+                     total_tip = 0
+                     total_riddle = 0
+                     total_poker = 0
+
+                     order.order_items.each do |item|
+                       article = item.article
+                       line_total = item.quantity * item.unit_price
+                       
+                       # Tax 8.1
+                       if article.tax_code&.rate == 8.1 && !article.name&.start_with?("Riddle")
+                          total_8_1 += line_total
+                       end
+                       
+                       # Tax 2.6
+                       if article.tax_code&.rate == 2.6
+                          total_2_6 += line_total
+                       end
+                       
+                       # Vouchers
+                       if article.is_voucher
+                          total_vouchers += line_total
+                       end
+                       
+                       # Tip
+                       if article.name == "Trinkgeld"
+                          total_tip += line_total
+                       end
+
+                       # Riddle
+                       if article.name&.start_with?("Riddle")
+                          total_riddle += line_total
+                       end
+
+                       # Poker
+                       if article.name == "Poker buy in"
+                          total_poker += line_total
+                       end
+                     end
+                     
+                     is_cash = (order.payment_method == 'cash')
+
+                     if is_cash
+                        day_total_cash_8_1 += total_8_1
+                        day_total_cash_2_6 += total_2_6
+                        day_total_cash_vouchers += total_vouchers
+                        day_total_cash_tip += total_tip
+                        day_total_cash_riddle += total_riddle
+                        day_total_cash_poker += total_poker
+                     else
+                        day_total_credit_8_1 += total_8_1
+                        day_total_credit_2_6 += total_2_6
+                        day_total_credit_vouchers += total_vouchers
+                        day_total_credit_tip += total_tip
+                        day_total_credit_riddle += total_riddle
+                        day_total_credit_poker += total_poker
+                     end
+                  %>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2 text-gray-900 font-mono whitespace-nowrap"><%= order.created_at.strftime("%H:%M") %></td>
+                    
+                    <!-- Cash Columns -->
+                    <% if is_cash %>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-yellow-50"><%= number_to_currency(total_8_1, unit: '') if total_8_1 > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-yellow-50"><%= number_to_currency(total_2_6, unit: '') if total_2_6 > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-yellow-50"><%= number_to_currency(total_vouchers, unit: '') if total_vouchers > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-yellow-50"><%= number_to_currency(total_tip, unit: '') if total_tip > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-yellow-50"><%= number_to_currency(total_riddle, unit: '') if total_riddle > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-yellow-50"><%= number_to_currency(total_poker, unit: '') if total_poker > 0 %></td>
+                    <% else %>
+                       <td class="px-3 py-2 bg-yellow-50"></td>
+                       <td class="px-3 py-2 bg-yellow-50"></td>
+                       <td class="px-3 py-2 bg-yellow-50"></td>
+                       <td class="px-3 py-2 bg-yellow-50"></td>
+                       <td class="px-3 py-2 bg-yellow-50"></td>
+                       <td class="px-3 py-2 bg-yellow-50"></td>
+                    <% end %>
+
+                    <!-- Credit Columns -->
+                    <% unless is_cash %>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-blue-50"><%= number_to_currency(total_8_1, unit: '') if total_8_1 > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-blue-50"><%= number_to_currency(total_2_6, unit: '') if total_2_6 > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-blue-50"><%= number_to_currency(total_vouchers, unit: '') if total_vouchers > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-blue-50"><%= number_to_currency(total_tip, unit: '') if total_tip > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-blue-50"><%= number_to_currency(total_riddle, unit: '') if total_riddle > 0 %></td>
+                       <td class="px-3 py-2 text-right font-mono text-gray-900 bg-blue-50"><%= number_to_currency(total_poker, unit: '') if total_poker > 0 %></td>
+                    <% else %>
+                       <td class="px-3 py-2 bg-blue-50"></td>
+                       <td class="px-3 py-2 bg-blue-50"></td>
+                       <td class="px-3 py-2 bg-blue-50"></td>
+                       <td class="px-3 py-2 bg-blue-50"></td>
+                       <td class="px-3 py-2 bg-blue-50"></td>
+                       <td class="px-3 py-2 bg-blue-50"></td>
+                    <% end %>
+                  </tr>
+                <% end %>
+              </tbody>
+              <tfoot class="bg-gray-100 font-bold border-t-2 border-gray-300">
+                <tr>
+                  <td class="px-3 py-2 text-right">Total:</td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-yellow-100"><%= number_to_currency(day_total_cash_8_1, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-yellow-100"><%= number_to_currency(day_total_cash_2_6, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-yellow-100"><%= number_to_currency(day_total_cash_vouchers, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-yellow-100"><%= number_to_currency(day_total_cash_tip, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-yellow-100"><%= number_to_currency(day_total_cash_riddle, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-yellow-100"><%= number_to_currency(day_total_cash_poker, unit: '') %></td>
+                  
+                  <td class="px-3 py-2 text-right text-gray-900 bg-blue-100"><%= number_to_currency(day_total_credit_8_1, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-blue-100"><%= number_to_currency(day_total_credit_2_6, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-blue-100"><%= number_to_currency(day_total_credit_vouchers, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-blue-100"><%= number_to_currency(day_total_credit_tip, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-blue-100"><%= number_to_currency(day_total_credit_riddle, unit: '') %></td>
+                  <td class="px-3 py-2 text-right text-gray-900 bg-blue-100"><%= number_to_currency(day_total_credit_poker, unit: '') %></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+  <div class="mt-12">
+    <h1 class="text-3xl font-bold mb-6 text-[#2C2C2C]">Transaktionen (Offen)</h1>
+    <% if @transactions.any? %>
+      <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+           <thead class="bg-gray-50">
+             <tr>
+               <th class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+               <th class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Typ</th>
+               <th class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">Betrag</th>
+               <th class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Beschreibung</th>
+             </tr>
+           </thead>
+           <tbody class="bg-white divide-y divide-gray-200">
+             <% @transactions.each do |t| %>
+               <tr class="hover:bg-gray-50">
+                 <td class="px-3 py-3 text-gray-900 whitespace-nowrap"><%= t.created_at.strftime("%d.%m.%Y %H:%M") %></td>
+                 <td class="px-3 py-3 text-gray-900"><%= t.transaction_type %></td>
+                 <td class="px-3 py-3 text-right text-gray-900 font-mono font-bold"><%= number_to_currency(t.amount, unit: '') %></td>
+                 <td class="px-3 py-3 text-gray-900"><%= t.description %></td>
+               </tr>
+             <% end %>
+           </tbody>
+        </table>
+      <div class="mt-4 text-right">
+        <%= button_to "Verbuchen", accounting_create_transaction_booking_path, method: :post, class: "bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded text-base transition" %>
+      </div>
+    <% else %>
+      <p class="text-gray-500">Keine offenen Transaktionen.</p>
+    <% end %>
+  </div>
+</div>

@@ -1,0 +1,61 @@
+<div class="max-w-4xl mx-auto">
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="font-bold text-3xl text-[#2C2C2C]">Edit Section: <%= @section.name %></h1>
+    <%= link_to "Back to Register", edit_cash_register_path(@section.cash_register), class: "text-gray-600 hover:text-[#FFD100]" %>
+  </div>
+
+  <div class="bg-white shadow rounded-lg p-6 mb-8">
+    <%= form_with(model: @section, class: "space-y-4") do |form| %>
+      <div>
+        <%= form.label :name, class: "block font-medium text-gray-700" %>
+        <%= form.text_field :name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
+      </div>
+      <div>
+        <%= form.label :group_filter, "Group Filter (Optional - Manual selection overrides this)", class: "block font-medium text-gray-700" %>
+        <%= form.text_field :group_filter, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
+      </div>
+      <div>
+        <%= form.submit "Update Section Details", class: "bg-[#2C2C2C] text-white px-4 py-2 rounded font-medium hover:bg-black cursor-pointer" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div>
+      <h2 class="text-xl font-bold mb-4">Add Articles</h2>
+      <div class="bg-white shadow rounded-lg p-6">
+        <%= form_with url: add_article_section_path(@section), method: :post, class: "flex gap-2" do |form| %>
+          <%= form.text_field :query, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 border", placeholder: "Scan Barcode or Enter SKU", autofocus: true %>
+          <%= form.submit "Add", class: "bg-[#FFD100] text-[#2C2C2C] px-4 py-2 rounded font-bold hover:bg-yellow-400 cursor-pointer" %>
+        <% end %>
+        <p class="text-sm text-gray-500 mt-2">Scan an item to add it to this section manualy.</p>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="text-xl font-bold mb-4">Current Articles</h2>
+      <div class="bg-white shadow rounded-lg overflow-hidden">
+        <% if @articles.any? %>
+          <ul class="divide-y divide-gray-200">
+            <% @articles.each do |article| %>
+              <li class="p-4 flex justify-between items-center hover:bg-gray-50">
+                <div>
+                  <p class="font-medium text-gray-900"><%= article.name %></p>
+                  <p class="text-sm text-gray-500"><%= article.sku %></p>
+                </div>
+                <%= button_to "Remove", remove_article_section_path(@section, article_id: article.id), method: :delete, class: "text-red-600 hover:text-red-900 text-sm font-medium" %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <div class="p-6 text-center text-gray-500">
+            No manual articles added.
+            <% if @section.group_filter.present? %>
+              <p class="text-xs mt-1">Articles from group "<%= @section.group_filter %>" will be included automatically.</p>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

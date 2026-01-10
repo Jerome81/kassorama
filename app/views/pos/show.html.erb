@@ -1,0 +1,315 @@
+<% content_for :modal do %>
+<div id="parked-orders-modal" class="hidden fixed inset-0 w-full h-full bg-gray-600 bg-opacity-50 z-[9999] grid place-items-center overflow-auto">
+    <div class="relative p-8 border w-96 shadow-lg rounded-md bg-white">
+        <!-- ... existing parked orders content ... -->
+        <div class="mt-3 text-center">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">Zurückgestellte Bestellungen</h3>
+            <div class="mt-2 py-3 max-h-60 overflow-y-auto text-left">
+                <% @parked_orders.each do |order| %>
+                    <div class="flex justify-between items-center py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-100 transition px-3 rounded-lg" onclick="document.getElementById('restore-btn-<%= order.id %>').click()">
+                        <div>
+                            <div class="font-bold text-sm text-gray-800"><%= order.name %></div>
+                            <div class="text-xs text-gray-500"><%= order.updated_at.strftime("%d.%m.%Y %H:%M") %></div>
+                            <div class="text-xs text-gray-400"><%= order.order_items.sum(&:quantity) %> Artikel, <%= number_to_currency(order.order_items.sum { |i| i.quantity * i.unit_price }) %></div>
+                        </div>
+                        <%= button_to "Laden", restore_order_pos_path(@cash_register, order_id: order.id), method: :post, class: "bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs px-2 py-1 rounded font-bold", id: "restore-btn-#{order.id}" %>
+                    </div>
+                <% end %>
+            </div>
+            <div class="items-center px-4 py-3">
+                <button id="ok-btn" onclick="document.getElementById('parked-orders-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                    Schließen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="item-discount-modal" class="hidden fixed inset-0 w-full h-full bg-gray-600 bg-opacity-50 z-[9999] grid place-items-center">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+        <h3 class="text-lg font-bold mb-4" id="item-discount-title">Rabatt für Artikel</h3>
+        <p class="text-sm text-gray-500 mb-4">Originalpreis: <span id="item-original-price" class="font-bold"></span></p>
+        
+        <div class="mb-4">
+             <label class="block text-sm font-medium text-gray-700 mb-1">Rabatt Wert</label>
+             <input type="number" id="item_discount_value" class="w-full border-gray-300 rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100] text-lg" placeholder="0.00" step="0.01" autofocus>
+        </div>
+        
+        <div class="flex gap-4 mb-6">
+             <label class="flex items-center cursor-pointer">
+                <input type="radio" name="item_discount_type" value="fixed" checked class="text-[#FFD100] focus:ring-[#FFD100] h-4 w-4">
+                <span class="ml-2 text-sm font-medium">Fixed (CHF)</span>
+             </label>
+             <label class="flex items-center cursor-pointer">
+                <input type="radio" name="item_discount_type" value="percent" class="text-[#FFD100] focus:ring-[#FFD100] h-4 w-4">
+                <span class="ml-2 text-sm font-medium">% Prozent</span>
+             </label>
+        </div>
+        
+        <div class="mb-6 p-4 bg-gray-50 rounded text-right border border-gray-100">
+             <span class="text-gray-500 text-xs uppercase tracking-wide">Neuer Preis</span>
+             <div class="text-3xl font-bold text-[#2C2C2C] mt-1" id="item-new-price">0.00</div>
+        </div>
+        
+        <div class="flex justify-end gap-2">
+            <button onclick="closeItemDiscountModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded font-medium">Cancel</button>
+            <button onclick="applyItemDiscount()" class="px-6 py-2 bg-[#FFD100] hover:bg-yellow-400 text-gray-900 font-bold rounded shadow-sm">OK</button>
+        </div>
+        
+        <!-- Hidden Form to submit -->
+        <%= form_with url: "#", method: :post, id: "item-discount-form", class: "hidden", local: true do |f| %>
+            <%= f.hidden_field :discount_value, id: "form_discount_value" %>
+            <%= f.hidden_field :discount_type, id: "form_discount_type" %>
+        <% end %>
+    </div>
+</div>
+
+<script>
+    let currentItemGrossPrice = 0;
+    let currentItemId = null;
+
+    function openItemDiscountModal(id, grossPrice, name) {
+        currentItemId = id;
+        currentItemGrossPrice = parseFloat(grossPrice);
+        
+        document.getElementById('item-discount-title').textContent = "Rabatt für: " + name;
+        document.getElementById('item-original-price').textContent = currentItemGrossPrice.toFixed(2);
+        document.getElementById('item_discount_value').value = '';
+        document.querySelector('input[name="item_discount_type"][value="fixed"]').checked = true;
+        
+        // Reset calculation
+        calculateItemNewPrice();
+        
+        document.getElementById('item-discount-modal').classList.remove('hidden');
+        setTimeout(() => document.getElementById('item_discount_value').focus(), 100);
+    }
+
+    function closeItemDiscountModal() {
+        document.getElementById('item-discount-modal').classList.add('hidden');
+    }
+
+    function calculateItemNewPrice() {
+        let val = parseFloat(document.getElementById('item_discount_value').value) || 0;
+        let type = document.querySelector('input[name="item_discount_type"]:checked').value;
+        let discount = 0;
+
+        if (type === 'percent') {
+            discount = currentItemGrossPrice * (val / 100.0);
+        } else {
+            discount = val;
+        }
+        
+        let newPrice = Math.max(0, currentItemGrossPrice - discount);
+        newPrice = Math.round(newPrice * 20) / 20.0;
+        document.getElementById('item-new-price').textContent = newPrice.toFixed(2);
+    }
+    
+    function applyItemDiscount() {
+        let val = parseFloat(document.getElementById('item_discount_value').value) || 0;
+        let type = document.querySelector('input[name="item_discount_type"]:checked').value;
+        
+        document.getElementById('form_discount_value').value = val;
+        document.getElementById('form_discount_type').value = type;
+        
+        let form = document.getElementById('item-discount-form');
+        
+        // Ensure CSRF Token is present and correct
+        let tokenTag = document.querySelector('meta[name="csrf-token"]');
+        if (tokenTag) {
+             let tokenInput = form.querySelector('input[name="authenticity_token"]');
+             if (!tokenInput) {
+                 tokenInput = document.createElement('input');
+                 tokenInput.type = 'hidden';
+                 tokenInput.name = 'authenticity_token';
+                 form.appendChild(tokenInput);
+             }
+             tokenInput.value = tokenTag.content;
+        }
+        
+        // Construct URL directly
+        let action = "/pos/" + "<%= @cash_register.id %>" + "/update_item_discount?item_id=" + currentItemId + "&section_id=<%= params[:section_id] %>";
+        form.action = action;
+        
+        form.requestSubmit();
+    }
+
+    // Attach listeners
+    document.getElementById('item_discount_value').addEventListener('input', calculateItemNewPrice);
+    document.querySelectorAll('input[name="item_discount_type"]').forEach(r => r.addEventListener('change', calculateItemNewPrice));
+</script>
+<% end %>
+
+<div class="mx-auto w-full max-w-7xl h-[calc(100vh-100px)]">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-2 text-green-500 font-medium rounded-lg inline-block" id="notice"><%= notice %></p>
+  <% end %>
+  <% if alert.present? %>
+    <p class="py-2 px-3 bg-red-50 mb-2 text-red-500 font-medium rounded-lg inline-block" id="alert"><%= alert %></p>
+  <% end %>
+
+  <div class="flex flex-col md:flex-row gap-6 h-full">
+    <!-- Left Column: Cart (40% width) -->
+    <div class="md:w-2/5 flex flex-col h-full">
+
+      
+      <!-- Cart Table (Scrollable) -->
+      <div class="bg-white shadow overflow-hidden sm:rounded-lg flex-grow overflow-y-auto mb-4 border border-gray-200">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50 sticky top-0">
+            <tr>
+              <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article</th>
+              <th scope="col" class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+              <th scope="col" class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+              <th scope="col" class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @order_items.each do |item| %>
+              <tr>
+                <td class="px-3 py-2 cursor-pointer hover:bg-gray-50 transition" onclick="openItemDiscountModal('<%= item.id %>', <%= item.quantity * item.unit_price %>, '<%= j item.article.name %>')">
+                  <div class="text-sm font-medium text-gray-900"><%= item.article.name %></div>
+                  <div class="text-xs text-gray-500"><%= number_to_currency(item.unit_price, unit: '') %></div>
+                </td>
+                <td class="px-3 py-2 text-right whitespace-nowrap text-sm text-gray-500">
+                  <div class="flex items-center justify-end space-x-2">
+                    <% if item.article.price_type == 'free' %>
+                       <!-- Free items must be individual lines as they can have different prices, so quantity is fixed at 1 unless we implement advanced logic -->
+                       <span class="font-medium text-lg w-6 text-center text-gray-400">1</span>
+                    <% else %>
+                      <%= button_to "-", update_item_quantity_pos_path(@cash_register, item_id: item.id, change: -1, section_id: params[:section_id]), method: :patch, class: "bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-2 rounded text-xs" %>
+                      <span class="font-medium text-lg w-6 text-center"><%= item.quantity %></span>
+                      <%= button_to "+", update_item_quantity_pos_path(@cash_register, item_id: item.id, change: 1, section_id: params[:section_id]), method: :patch, class: "bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-2 rounded text-xs" %>
+                    <% end %>
+                  </div>
+                </td>
+                <td class="px-3 py-2 text-right whitespace-nowrap align-middle">
+                   <% if item.discount.to_f > 0 %>
+                      <div class="text-xs text-gray-400 line-through"><%= number_to_currency((item.gross_price || (item.quantity * item.unit_price)), unit: '') %></div>
+                      <div class="text-xs text-green-600 font-bold">- <%= number_to_currency(item.discount, unit: '') %></div>
+                      <div class="text-sm font-bold text-gray-900"><%= number_to_currency(item.net_price, unit: '') %></div>
+                   <% else %>
+                      <div class="text-sm font-bold text-gray-900"><%= number_to_currency((item.gross_price || (item.quantity * item.unit_price)), unit: '') %></div>
+                   <% end %>
+                </td>
+                <td class="px-3 py-2 text-right whitespace-nowrap align-middle">
+                  <%= button_to remove_item_pos_path(@cash_register, item_id: item.id, section_id: params[:section_id]), method: :delete, class: "text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition" do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                    </svg>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals & Checkout (Fixed at bottom of left column) -->
+      <div class="bg-gray-100 p-4 rounded-lg shadow-inner">
+        <div class="flex justify-between items-center mb-4">
+          <span class="text-xl font-bold text-gray-600">Total:</span>
+          <span class="text-3xl font-bold text-[#2C2C2C]"><%= number_to_currency(@total, unit: '') %></span>
+        </div>
+        <%= link_to "Checkout & Pay", payment_pos_path(@cash_register), class: "w-full block text-center bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] font-bold py-4 px-6 rounded-lg text-xl shadow transform transition hover:scale-[1.02]" %>
+        
+
+      </div>
+    </div>
+
+    <!-- Right Column: Sections & Products (60% width) -->
+    <div class="md:w-3/5 flex flex-col h-full">
+      
+      <!-- Search Bar -->
+      <div class="flex justify-between mb-2 gap-2">
+        <div class="flex space-x-2 overflow-x-auto">
+          <% @cash_register.precreated_tabs.to_s.split(',').map(&:strip).reject(&:empty?).each do |tab_name| %>
+            <% existing_order = @parked_orders.find { |o| o.name == tab_name } %>
+            <% if existing_order %>
+               <%= button_to tab_name, restore_order_pos_path(@cash_register, order_id: existing_order.id), method: :post, class: "text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded font-medium transition cursor-pointer border border-red-200 whitespace-nowrap", form: { class: "inline-block" } %>
+            <% else %>
+               <%= button_to tab_name, park_order_pos_path(@cash_register, name: tab_name), method: :post, class: "text-sm bg-gray-50 hover:bg-gray-100 text-gray-500 px-3 py-1 rounded font-medium transition cursor-pointer border border-gray-300 border-dashed whitespace-nowrap", form: { class: "inline-block" } %>
+            <% end %>
+          <% end %>
+        </div>
+        <div class="flex space-x-2 shrink-0">
+          <button type="button" onclick="parkOrder()" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded font-medium transition cursor-pointer whitespace-nowrap">Parken</button>
+          <% if @parked_orders.any? %>
+             <button type="button" onclick="document.getElementById('parked-orders-modal').classList.remove('hidden')" class="text-sm bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] px-3 py-1 rounded font-medium transition cursor-pointer whitespace-nowrap">Hervorholen (<%= @parked_orders.count %>)</button>
+          <% end %>
+        </div>
+      </div>
+
+
+
+      <%= form_with url: park_order_pos_path(@cash_register), method: :post, id: "park-order-form", class: "hidden" do |f| %>
+          <%= f.hidden_field :name, id: "park-order-name" %>
+      <% end %>
+
+      <script>
+          function parkOrder() {
+              const defaultName = "<%= @cash_register.name %> - <%= Time.current.strftime('%d.%m.%Y %H:%M') %>";
+              const name = prompt("Name für zurückgestellte Bestellung:", defaultName);
+              if (name !== null) {
+                  document.getElementById("park-order-name").value = name;
+                  document.getElementById("park-order-form").requestSubmit();
+              }
+          }
+      </script>
+
+      <!-- Search Bar -->
+      <div class="bg-white p-4 shadow rounded-lg mb-4">
+        <%= form_with url: add_item_pos_path(@cash_register, section_id: params[:section_id]), method: :post, class: "flex gap-2" do |form| %>
+          <%= form.text_field :query, class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] sm:text-lg p-2 border", placeholder: "Scan Barcode or Enter SKU", autofocus: true %>
+          <%= form.submit "Add", class: "bg-[#2C2C2C] text-white px-6 py-2 rounded-md font-bold hover:bg-black transition" %>
+        <% end %>
+      </div>
+
+      <!-- Sections Tabs -->
+      <% if params[:search_query].present? %>
+        <div class="flex items-center justify-between bg-blue-50 p-3 rounded-lg mb-4 border border-blue-100">
+          <span class="text-blue-800 font-medium">Search results for "<%= params[:search_query] %>" (<%= @articles.count %> found)</span>
+          <%= link_to "Clear Search", pos_path(@cash_register, section_id: params[:section_id]), class: "text-blue-600 hover:text-blue-800 text-sm font-bold" %>
+        </div>
+      <% elsif @sections.any? %>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <% @sections.each do |section| %>
+            <%= link_to section.name, pos_path(@cash_register, section_id: section.id), class: "px-4 py-2 rounded-full font-medium transition shadow-sm #{params[:section_id].to_i == section.id || (@active_section&.id == section.id) ? 'bg-[#FFD100] text-[#2C2C2C] ring-2 ring-[#FFD100] ring-offset-2' : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'}" %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <!-- Product Grid -->
+      <div class="flex-grow overflow-y-auto bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <% if @articles.any? %>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <% @articles.each do |article| %>
+              <%= button_to add_item_pos_path(@cash_register, query: article.sku, section_id: params[:section_id]), method: :post, class: "w-full h-full text-left group" do %>
+                <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-[#FFD100] transition h-full flex flex-col">
+                  <!-- Image placeholder if available, or just name -->
+                  <div class="h-24 bg-gray-100 rounded mb-2 flex items-center justify-center overflow-hidden">
+                    <% if article.picture.present? %>
+                        <img src="<%= article.picture %>" alt="<%= article.name %>" class="object-cover h-full w-full">
+                    <% else %>
+                        <span class="text-gray-400 text-xs">No Img</span>
+                    <% end %>
+                  </div>
+                  <div class="font-bold text-gray-800 text-sm leading-tight group-hover:text-[#2C2C2C] mb-1"><%= article.name %></div>
+                  <div class="text-[#2C2C2C] font-mono text-xs mt-auto"><%= number_to_currency(article.price, unit: '') %></div>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="flex items-center justify-center h-full text-gray-400">
+            <p>No products found.</p>
+          </div>
+        <% end %>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+

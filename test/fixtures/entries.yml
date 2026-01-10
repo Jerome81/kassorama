@@ -1,0 +1,19 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  booking_date: 2026-01-05
+  debit_account: MyString
+  credit_account: MyString
+  description: MyString
+  tax_code: MyString
+  amount: 9.99
+  reference_number: MyString
+
+two:
+  booking_date: 2026-01-05
+  debit_account: MyString
+  credit_account: MyString
+  description: MyString
+  tax_code: MyString
+  amount: 9.99
+  reference_number: MyString

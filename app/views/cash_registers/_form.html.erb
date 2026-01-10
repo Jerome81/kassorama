@@ -1,0 +1,56 @@
+<%= form_with(model: cash_register, class: "contents") do |form| %>
+  <% if cash_register.errors.any? %>
+    <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-lg mt-3">
+      <h2><%= pluralize(cash_register.errors.count, "error") %> prohibited this cash_register from being saved:</h2>
+
+      <ul>
+        <% cash_register.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="my-5">
+    <%= form.label :name %>
+    <%= form.text_field :name, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :status %>
+    <%= form.select :status, [['Aktiv', 'active'], ['Inaktiv', 'inactive']], {}, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+  </div>
+  <div class="my-5">
+    <%= form.label :stock_location_id, "Take stock from Location" %>
+    <%= form.collection_select :stock_location_id, Location.all, :id, :name, { include_blank: "Select a Location" }, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :amount, "Current Cash Amount" %>
+    <%= form.number_field :amount, step: 0.01, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+  </div>
+
+  <div class="my-5">
+    <%= form.label :precreated_tabs, "Vorgefertigte Tabs (komma-seperierte Liste)" %>
+    <%= form.text_field :precreated_tabs, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+  </div>
+
+  <div class="my-8">
+    <h3 class="font-bold text-xl mb-4 text-[#2C2C2C]">Sections</h3>
+    <div id="sections">
+      <%= form.fields_for :sections do |section_form| %>
+        <%= render "section_fields", f: section_form %>
+      <% end %>
+    </div>
+    <div class="mt-2">
+       <!-- Note: For dynamic adding, we would need Stimulus. For now, we rely on editing existing or manually handling additions via Rails conventions if we added a button, but let's at least show existing ones and allow editing/destroying. To simplify, allow adding 3 new ones if none exist or manually. -->
+       <% if cash_register.sections.empty? %>
+          <p class="text-sm text-gray-500 italic mb-2">No sections yet. Save to create.</p>
+       <% end %>
+    </div>
+  </div>
+
+  <div class="inline">
+    <%= form.submit class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] inline-block font-bold cursor-pointer" %>
+  </div>
+<% end %>

@@ -1,0 +1,167 @@
+<%= form_with(model: article, class: "contents") do |form| %>
+  <% if article.errors.any? %>
+    <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-lg mt-3">
+      <h2><%= pluralize(article.errors.count, "error") %> prohibited this article from being saved:</h2>
+
+      <ul>
+        <% article.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="my-5">
+    <%= form.label :status %>
+    <%= form.select :status, [['Aktiv', 'active'], ['Inaktiv', 'inactive']], {}, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+  </div>
+
+  <div class="bg-white shadow rounded-lg mb-8">
+    <div class="px-6 py-6 border-b border-gray-200 sm:px-8">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Basisinformationen</h3>
+    </div>
+    <div class="px-6 py-8 sm:p-8 space-y-6">
+      <div>
+        <%= form.label :name %>
+        <%= form.text_field :name, id: "article_name", class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div>
+        <%= form.label :barcode %>
+        <%= form.text_field :barcode, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div>
+        <%= form.label :article_category_id, "Kategorie" %>
+        <%= form.collection_select :article_category_id, ArticleCategory.all, :id, :name, { include_blank: true }, id: "article_category_id", class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div>
+        <%= form.label :supplier_id, "Lieferant" %>
+        <%= form.collection_select :supplier_id, Supplier.all, :id, :name, { include_blank: true }, id: "article_supplier_id", class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div>
+        <%= form.label :sku, "Suchbegriff" %>
+        <%= form.text_field :sku, id: "article_sku", readonly: true, class: "block shadow rounded-md border border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div class="bg-white shadow rounded-lg mb-8">
+    <div class="px-6 py-6 border-b border-gray-200 sm:px-8">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Preisinformationen</h3>
+    </div>
+    <div class="px-6 py-8 sm:p-8 space-y-6">
+      <div>
+        <%= form.label :price %>
+        <%= form.number_field :price, step: 0.01, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div>
+        <%= form.label :cost, "Einstandspreis" %>
+        <%= form.number_field :cost, step: 0.01, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div>
+        <%= form.label :tax_code_id, "Tax Rate (MWST)" %>
+        <%= form.collection_select :tax_code_id, TaxCode.all, :id, :rate, {}, id: "article_tax_code_id", class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div>
+        <%= form.label :booking_account, "Buchungskonto" %>
+        <%= form.text_field :booking_account, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div>
+        <%= form.label :price_type, "Preistyp" %>
+        <%= form.select :price_type, Article.price_types.keys.map { |w| [w.humanize, w] }, {}, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      </div>
+
+      <div class="flex items-center pt-2">
+        <%= form.check_box :is_voucher, id: "article_is_voucher", class: "h-5 w-5 text-[#FFD100] border-gray-300 rounded focus:ring-[#FFD100]" %>
+        <%= form.label :is_voucher, "Ist Gutschein?", class: "ml-2 text-gray-900 font-medium" %>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div class="inline">
+    <%= form.submit class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] inline-block font-bold cursor-pointer" %>
+  </div>
+  <script>
+    (function() {
+      function setupSkuUpdater() {
+        const nameInput = document.getElementById("article_name");
+        const categoryInput = document.getElementById("article_category_id");
+        const supplierInput = document.getElementById("article_supplier_id");
+        const skuInput = document.getElementById("article_sku");
+
+        if (!nameInput || !categoryInput || !supplierInput || !skuInput) return;
+
+        function updateSku() {
+          const name = nameInput.value.trim();
+          const category = categoryInput.options[categoryInput.selectedIndex]?.text || "";
+          const supplier = supplierInput.options[supplierInput.selectedIndex]?.text || "";
+          
+          // Only include parts that are present
+          const parts = [supplier, category, name].filter(p => p && p.trim() !== "");
+          skuInput.value = parts.join("_");
+        }
+
+        if (nameInput.dataset.skuInitialized) return;
+        nameInput.dataset.skuInitialized = "true";
+
+        nameInput.addEventListener("input", updateSku);
+        categoryInput.addEventListener("change", updateSku);
+        supplierInput.addEventListener("change", updateSku);
+      }
+
+      function setupVoucherLogic() {
+        const voucherCheckbox = document.getElementById("article_is_voucher");
+        const taxSelect = document.getElementById("article_tax_code_id");
+        
+        if (!voucherCheckbox || !taxSelect) return;
+
+        function updateTaxState() {
+           if (voucherCheckbox.checked) {
+              // Find option with text "0.0" and select it
+              for (let i = 0; i < taxSelect.options.length; i++) {
+                  if (taxSelect.options[i].text.trim() === "0.0") {
+                      taxSelect.selectedIndex = i;
+                      break;
+                  }
+              }
+              // Visually disable
+              taxSelect.classList.add("bg-gray-100", "text-gray-400", "pointer-events-none");
+              // Prevent keyboard interaction
+              taxSelect.setAttribute("tabindex", "-1");
+           } else {
+              // Enable
+              taxSelect.classList.remove("bg-gray-100", "text-gray-400", "pointer-events-none");
+              taxSelect.removeAttribute("tabindex");
+           }
+        }
+
+        if (voucherCheckbox.dataset.voucherInitialized) return;
+        voucherCheckbox.dataset.voucherInitialized = "true";
+        
+        voucherCheckbox.addEventListener("change", updateTaxState);
+        // Run once on load to set initial state
+        updateTaxState();
+      }
+
+      function init() {
+        setupSkuUpdater();
+        setupVoucherLogic();
+      }
+
+      document.addEventListener("turbo:load", init);
+      document.addEventListener("turbo:render", init);
+      init();
+    })();
+  </script>
+<% end %>

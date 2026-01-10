@@ -1,0 +1,123 @@
+<div class="w-full max-w-4xl mx-auto">
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="font-bold text-4xl text-[#2C2C2C]">Kassensturz: <%= @cash_register.name %></h1>
+    <%= link_to "Zurück", pos_path(@cash_register), class: "rounded-lg py-3 px-5 bg-gray-200 text-[#2C2C2C] block font-bold hover:bg-gray-300 transition" %>
+  </div>
+
+  <%= form_with url: save_cash_count_cash_register_path(@cash_register), method: :post, id: "cash-count-form" do %>
+     <%= hidden_field_tag :total_counted, "0.00", id: "hidden_total_counted" %>
+  
+     <div class="bg-white shadow-lg rounded-2xl p-8 border border-gray-100 mb-8">
+        <div class="text-center mb-8">
+           <h2 class="text-gray-500 text-lg">Aktueller Kassenstand (System)</h2>
+           <div class="text-4xl font-bold text-[#2C2C2C]"><%= number_to_currency(@cash_register.amount || 0, unit: 'CHF') %></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+           <!-- Bills -->
+           <div>
+              <h3 class="font-bold text-xl mb-4 text-[#2C2C2C] border-b pb-2">Noten</h3>
+              <div class="space-y-4">
+                 <% [200, 100, 50, 20, 10].each do |denom| %>
+                     <div class="flex items-center gap-4">
+                        <div class="w-24 font-bold text-right"><%= denom %> CHF</div>
+                        <input type="number" min="0" placeholder="0" class="denom-qty w-20 rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-sm" data-denom="<%= denom %>">
+                        <div class="text-gray-400">×</div>
+                        <input type="number" min="0" step="0.01" placeholder="0.00" class="denom-total-input w-28 rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-right font-mono text-gray-700 text-sm" data-denom="<%= denom %>">
+                     </div>
+                  <% end %>
+               </div>
+            </div>
+
+            <!-- Coins -->
+            <div>
+               <h3 class="font-bold text-xl mb-4 text-[#2C2C2C] border-b pb-2">Münzen</h3>
+               <div class="space-y-4">
+                  <% [5.0, 2.0, 1.0, 0.50, 0.20, 0.10, 0.05].each do |denom| %>
+                     <div class="flex items-center gap-4">
+                        <div class="w-24 font-bold text-right"><%= number_to_currency(denom, unit: '') %> CHF</div>
+                        <input type="number" min="0" placeholder="0" class="denom-qty w-20 rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-sm" data-denom="<%= denom %>">
+                        <div class="text-gray-400">×</div>
+                        <input type="number" min="0" step="0.01" placeholder="0.00" class="denom-total-input w-28 rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-right font-mono text-gray-700 text-sm" data-denom="<%= denom %>">
+                     </div>
+                  <% end %>
+               </div>
+            </div>
+         </div>
+
+         <div class="mt-8 pt-8 border-t border-gray-200">
+            <div class="flex justify-between items-center mb-6">
+               <div class="text-xl font-bold text-gray-600">Gezählter Betrag:</div>
+               <div class="text-4xl font-bold text-[#FFD100]" id="total_counted">0.00 CHF</div>
+            </div>
+            <div class="flex justify-between items-center mb-8">
+               <div class="text-sm font-bold text-gray-500">Differenz:</div>
+               <div class="text-xl font-bold text-gray-400" id="difference">0.00 CHF</div>
+            </div>
+
+            <div class="text-center">
+               <%= submit_tag "Kassensturz verbuchen", class: "w-full md:w-auto bg-green-500 hover:bg-green-600 text-white text-xl font-bold py-4 px-12 rounded-lg shadow-lg transform transition hover:scale-105 cursor-pointer" %>
+            </div>
+         </div>
+      </div>
+  <% end %>
+ </div>
+ 
+ <script>
+   const expectedAmount = <%= @cash_register.amount || 0 %>;
+   
+   function calculateGrandTotal() {
+      let total = 0;
+      document.querySelectorAll('.denom-total-input').forEach(input => {
+         total += parseFloat(input.value) || 0;
+      });
+      
+      // Update grand total
+      document.getElementById('total_counted').textContent = total.toFixed(2) + " CHF";
+      document.getElementById('hidden_total_counted').value = total.toFixed(2);
+      
+      // Update diff
+      const diff = total - expectedAmount;
+      const diffEl = document.getElementById('difference');
+      diffEl.textContent = (diff > 0 ? "+" : "") + diff.toFixed(2) + " CHF";
+      
+      if (Math.abs(diff) < 0.05) {
+         diffEl.classList.remove('text-red-500', 'text-gray-400');
+         diffEl.classList.add('text-green-500');
+      } else {
+         diffEl.classList.remove('text-green-500', 'text-gray-400');
+         diffEl.classList.add('text-red-500');
+      }
+   }
+ 
+   document.querySelectorAll('.denom-qty').forEach(input => {
+      input.addEventListener('input', (e) => {
+         const qty = parseInt(e.target.value) || 0;
+         const denom = parseFloat(e.target.dataset.denom);
+         
+         const totalInput = e.target.parentElement.querySelector('.denom-total-input');
+         // Only update total if it's not the focused element (shouldn't happen here but good practice)
+         totalInput.value = (qty * denom).toFixed(2);
+         
+         calculateGrandTotal();
+      });
+   });
+   
+   document.querySelectorAll('.denom-total-input').forEach(input => {
+      input.addEventListener('input', (e) => {
+         const total = parseFloat(e.target.value) || 0;
+         const denom = parseFloat(e.target.dataset.denom);
+         
+         const qtyInput = e.target.parentElement.querySelector('.denom-qty');
+         // Reverse calc: total / denom = qty. Round to nearest integer.
+         // Warning: This can be inexact if user enters a total not divisible by denom.
+         // We will update qty to the closest integer.
+         if (denom > 0) {
+             const qty = Math.round(total / denom);
+             qtyInput.value = qty;
+         }
+         
+         calculateGrandTotal();
+      });
+   });
+ </script>

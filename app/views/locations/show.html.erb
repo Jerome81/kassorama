@@ -1,0 +1,89 @@
+<div class="max-w-7xl mx-auto">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="font-bold text-3xl text-[#2C2C2C]">Location: <%= @location.name %></h1>
+    <div class="space-x-2">
+      <%= link_to "Edit", edit_location_path(@location), class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
+      <%= link_to "Back", locations_path, class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
+    </div>
+  </div>
+
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-lg inline-block" id="notice"><%= notice %></p>
+  <% end %>
+  <% if alert.present? %>
+    <p class="py-2 px-3 bg-red-50 mb-5 text-red-500 font-medium rounded-lg inline-block" id="alert"><%= alert %></p>
+  <% end %>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Left Column: Add Stock -->
+    <div>
+      <div class="bg-white p-6 shadow rounded-lg mb-6">
+        <h2 class="text-xl font-bold mb-4">Add Stock</h2>
+        <!-- Search Form -->
+        <%= form_with url: location_path(@location), method: :get, class: "flex gap-2 mb-4" do |form| %>
+          <%= form.text_field :search_query, value: (@search_results.present? ? '' : params[:search_query]), class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 border", placeholder: "Scan Barcode, SKU or Name", autofocus: @search_results.blank? %>
+          <%= form.submit "Search", class: "bg-[#2C2C2C] text-white px-4 py-2 rounded font-bold hover:bg-black cursor-pointer" %>
+        <% end %>
+
+        <!-- Search Results -->
+        <% if @search_results.present? %>
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <ul class="divide-y divide-gray-200">
+              <% @search_results.each_with_index do |article, index| %>
+                <li class="p-3 hover:bg-gray-50">
+                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                      <p class="font-bold text-sm"><%= article.name %></p>
+                      <p class="text-xs text-gray-500"><%= article.sku %> | <%= article.barcode %></p>
+                    </div>
+                    <%= form_with url: add_stock_location_path(@location), method: :post, class: "flex items-center gap-2" do |f| %>
+                      <%= f.hidden_field :article_id, value: article.id %>
+                      <%= f.number_field :quantity, value: 1, min: 1, class: "w-20 rounded border-gray-300 text-sm p-1", autofocus: (index == 0), onfocus: "this.select()" %>
+                      <%= f.submit "Add", class: "bg-[#FFD100] text-[#2C2C2C] px-3 py-1 rounded text-sm font-bold hover:bg-yellow-400 cursor-pointer" %>
+                    <% end %>
+                  </div>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% elsif params[:search_query].present? %>
+          <p class="text-gray-500 text-sm mt-2">No articles found.</p>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Right Column: Current Inventory -->
+    <div>
+      <h2 class="text-xl font-bold mb-4">Current Inventory</h2>
+      <div class="bg-white shadow rounded-lg overflow-hidden">
+        <% if @stocks.any? %>
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article</th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <% @stocks.each do |stock| %>
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900"><%= stock.article.name %></div>
+                    <div class="text-xs text-gray-500"><%= stock.article.sku %></div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 font-bold">
+                    <%= stock.quantity %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% else %>
+          <div class="p-6 text-center text-gray-500">
+            No stock recorded in this location.
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

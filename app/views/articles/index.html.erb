@@ -1,0 +1,60 @@
+<div class="w-full">
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-lg inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="font-bold text-4xl text-[#2C2C2C]">Articles</h1>
+    <%= link_to "New article", new_article_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold hover:bg-yellow-400 transition" %>
+  </div>
+
+  <div class="overflow-x-auto shadow-md sm:rounded-lg">
+    <table class="w-full text-sm text-left text-gray-500">
+      <thead class="text-xs text-white uppercase bg-[#2C2C2C]">
+        <tr>
+          <th scope="col" class="px-6 py-3">Name</th>
+          <th scope="col" class="px-6 py-3">SKU</th>
+          <th scope="col" class="px-6 py-3">Barcode</th>
+          <th scope="col" class="px-6 py-3">Price</th>
+          <th scope="col" class="px-6 py-3">Group</th>
+          <th scope="col" class="px-6 py-3">MWST</th>
+          <th scope="col" class="px-6 py-3">Status</th>
+          <th scope="col" class="px-6 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @articles.each do |article| %>
+          <tr class="bg-white border-b hover:bg-gray-50">
+            <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+              <span class="text-gray-500 font-normal mr-1"><%= article.group %></span> <%= article.name %>
+            </td>
+            <td class="px-6 py-4">
+              <%= article.sku %>
+            </td>
+            <td class="px-6 py-4">
+              <%= article.barcode %>
+            </td>
+            <td class="px-6 py-4">
+              <%= number_to_currency(article.price) %>
+            </td>
+            <td class="px-6 py-4">
+              <%= article.group %>
+            </td>
+            <td class="px-6 py-4">
+              <%= article.tax_code&.rate %>%
+            </td>
+            <td class="px-6 py-4">
+              <span class="<%= article.status == 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %> text-xs font-medium me-2 px-2.5 py-0.5 rounded border border-gray-200">
+                <%= article.status.capitalize %>
+              </span>
+            </td>
+            <td class="px-6 py-4 text-right">
+              <%= link_to "Show", article, class: "font-medium text-[#2C2C2C] hover:text-[#FFD100] hover:underline mr-3" %>
+              <%= link_to "Edit", edit_article_path(article), class: "font-medium text-[#2C2C2C] hover:text-[#FFD100] hover:underline" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,27 @@
+<div class="h-[calc(100vh-100px)] flex flex-col items-center justify-center p-6">
+  <div class="bg-white shadow-lg rounded-2xl p-8 border border-gray-100 text-center w-[400px] max-w-full">
+    <h1 class="text-3xl font-bold text-[#2C2C2C] mb-4">Preis eingeben</h1>
+    <p class="text-gray-500 mb-8">Für <%= @article.name %></p>
+
+    <%= form_with url: save_free_price_item_pos_path(@cash_register), method: :post, class: "space-y-6" do |form| %>
+      <%= hidden_field_tag :article_id, @article.id %>
+      <% if params[:section_id] %>
+        <%= hidden_field_tag :section_id, params[:section_id] %>
+      <% end %>
+
+      <div>
+        <div class="relative rounded-md shadow-sm">
+           <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+             <span class="text-gray-500 sm:text-lg">CHF</span>
+           </div>
+           <%= form.number_field :price, value: @article.price, step: 0.01, class: "block w-full rounded-md border-gray-300 pl-12 focus:border-[#FFD100] focus:ring-[#FFD100] text-xl py-3", autofocus: true, required: true %>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <%= link_to "Abbrechen", pos_path(@cash_register, section_id: params[:section_id]), class: "block w-full rounded-lg bg-gray-200 px-4 py-3 text-center font-bold text-gray-700 hover:bg-gray-300" %>
+        <%= form.submit "Hinzufügen", class: "block w-full rounded-lg bg-[#FFD100] px-4 py-3 text-center font-bold text-[#2C2C2C] hover:bg-yellow-400 cursor-pointer" %>
+      </div>
+    <% end %>
+  </div>
+</div>

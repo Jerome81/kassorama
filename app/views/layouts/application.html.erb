@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Kassorama</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="bg-gray-100 font-sans text-gray-900 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <nav class="bg-[#2C2C2C] text-white shadow-lg z-10 flex-shrink-0">
+      <div class="w-full px-4">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center">
+            <!-- Logo / Brand -->
+            <a href="/" class="flex items-center">
+              <span class="font-bold text-[#FFD100] text-2xl tracking-tight">Kassorama</span>
+            </a>
+          </div>
+
+          <!-- POS Links & User Info -->
+          <div class="hidden md:flex items-center space-x-4">
+             <% if @cash_register&.persisted? %>
+                <%= link_to "Transaktionen", transactions_cash_register_path(@cash_register), class: "py-2 px-3 rounded hover:text-[#FFD100] transition duration-300 #{'text-[#FFD100]' if request.path.include?('/transactions')}" %>
+                <%= link_to "Kassensturz", cash_count_cash_register_path(@cash_register), class: "py-2 px-3 rounded hover:text-[#FFD100] transition duration-300 #{'text-[#FFD100]' if request.path.include?('/cash_count')}" %>
+                <%= link_to "Bargeld Entnehmen", withdraw_cash_pos_path(@cash_register), class: "py-2 px-3 rounded hover:text-[#FFD100] transition duration-300 #{'text-[#FFD100]' if request.path.include?('/withdraw_cash')}" %>
+             <% end %>
+             
+             <% if current_user %>
+               <div class="flex items-center text-sm ml-4 border-l border-gray-600 pl-4 space-x-3">
+                 <%= button_to logout_path, method: :delete, title: "Logout", class: "text-gray-400 hover:text-white transition" do %>
+                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                   </svg>
+                 <% end %>
+                 <span class="text-gray-300 font-medium">
+                    <%= current_user.name %>
+                 </span>
+               </div>
+             <% end %>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Layout -->
+    <div class="flex flex-grow overflow-hidden">
+      
+      <!-- Sidebar -->
+      <% unless controller_name == 'pos' || controller_name == 'sessions' || current_user&.role == 'Front' %>
+        <aside class="w-64 bg-[#2C2C2C] border-r border-gray-700 overflow-y-auto flex-shrink-0">
+          <nav class="p-4 space-y-6">
+            <!-- Artikel -->
+            <div>
+              <h3 class="px-3 text-xs font-bold text-[#FFD100] uppercase tracking-wider mb-2">Artikel</h3>
+              <div class="space-y-1 ml-6">
+                <%= link_to "Artikel", articles_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(articles_path) && !request.path.include?(stock_transfers_path)}" %>
+                <%= link_to "Waren verschieben", stock_transfers_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(stock_transfers_path)}" %>
+                <%= link_to "Waren hinzufügen", locations_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700" %>
+                <%= link_to "Inventar", inventories_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(inventories_path)}" %>
+              </div>
+            </div>
+
+            <!-- Kassen -->
+            <div>
+              <h3 class="px-3 text-xs font-bold text-[#FFD100] uppercase tracking-wider mb-2">Kassen</h3>
+              <div class="space-y-1 ml-6">
+                 <%= link_to "Kassen", cash_registers_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(cash_registers_path)}" %>
+              </div>
+            </div>
+
+            <!-- Anderes -->
+            <div>
+              <h3 class="px-3 text-xs font-bold text-[#FFD100] uppercase tracking-wider mb-2">Anderes</h3>
+              <div class="space-y-1 ml-6">
+                 <%= link_to "Lagerorte", locations_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(locations_path)}" %>
+              </div>
+            </div>
+
+            <!-- Buchhaltung -->
+            <% if current_user&.role == 'Admin' %>
+            <div>
+              <h3 class="px-3 text-xs font-bold text-[#FFD100] uppercase tracking-wider mb-2">Buchhaltung</h3>
+              <div class="space-y-1 ml-6">
+                 <%= link_to "Verbuchen", accounting_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(accounting_path)}" %>
+                 <%= link_to "Buchungen", entries_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(entries_path)}" %>
+              </div>
+            </div>
+            <% end %>
+
+            <!-- Admin -->
+            <% if current_user&.role == 'Admin' %>
+            <div>
+              <h3 class="px-3 text-xs font-bold text-[#FFD100] uppercase tracking-wider mb-2">Admin</h3>
+              <div class="space-y-1 ml-6">
+                 <%= link_to "Benutzer", users_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(users_path)}" %>
+                <%= link_to "Kategorien", article_categories_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(article_categories_path)}" %>
+                 <%= link_to "MWSt Codes", tax_codes_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(tax_codes_path)}" %>
+                 <%= link_to "Artikel Statistik", article_stats_index_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(article_stats_index_path)}" %>
+                 </div>
+            </div>
+            <% end %>
+          </nav>
+        </aside>
+      <% end %>
+
+      <!-- Content -->
+      <main class="flex-1 overflow-y-auto bg-gray-50 p-8">
+        <% if notice %>
+          <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline"><%= notice %></span>
+          </div>
+        <% end %>
+        <% if alert %>
+          <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <span class="block sm:inline"><%= alert %></span>
+          </div>
+        <% end %>
+        <%= yield %>
+        
+
+      </main>
+    </div>
+
+    <%= yield :modal %>
+  </body>
+</html>

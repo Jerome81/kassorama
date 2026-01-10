@@ -1,0 +1,24 @@
+<div class="nested-fields border border-gray-200 rounded p-4 mb-4 bg-gray-50 relative">
+  <div class="my-2">
+    <%= f.label :name, class: "block font-medium text-gray-700" %>
+    <%= f.text_field :name, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
+  </div>
+
+  <div class="my-2">
+    <%= f.label :group_filter, "Group Filter (e.g. Apparel)", class: "block font-medium text-gray-700" %>
+    <%= f.text_field :group_filter, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
+  </div>
+
+  <div class="mt-2 flex justify-between items-center">
+    <% if f.object.persisted? %>
+      <%= link_to "Manage Content (Add Articles)", edit_section_path(f.object), class: "text-sm text-blue-600 hover:text-[#FFD100] font-medium" %>
+    <% else %>
+      <span class="text-sm text-gray-400">Save to manage content</span>
+    <% end %>
+    
+    <div>
+      <%= f.check_box :_destroy, class: "rounded border-gray-300 text-red-600 focus:ring-red-500" %>
+      <%= f.label :_destroy, "Remove Section", class: "text-red-600 font-medium" %>
+    </div>
+  </div>
+</div>

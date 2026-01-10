@@ -1,0 +1,75 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-800">Bexio Einstellungen</h1>
+    <%= link_to "Zurück zur Buchhaltung", accounting_path, class: "text-blue-600 hover:text-blue-800" %>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
+    <h2 class="text-xl font-semibold mb-4 text-[#2C2C2C]">API Credentials</h2>
+    <p class="text-gray-600 mb-6 text-sm">
+      Erstellen Sie eine App im <a href="https://developer.bexio.com" target="_blank" class="text-blue-500 underline">Bexio Developer Portal</a> 
+      und tragen Sie die Credentials hier ein. 
+      <br>Redirect URI: <code><%= accounting_bexio_callback_url %></code>
+    </p>
+
+    <%= form_with url: accounting_settings_path, method: :post, class: "space-y-4" do |f| %>
+      <div>
+        <%= f.label :client_id, "Client ID", class: "block text-sm font-medium text-gray-700" %>
+        <%= f.text_field :client_id, value: @client_id, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
+      </div>
+
+      <div>
+        <%= f.label :client_secret, "Client Secret", class: "block text-sm font-medium text-gray-700" %>
+        <%= f.password_field :client_secret, value: @client_secret, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
+      </div>
+
+      <div class="pt-4">
+        <%= f.submit "Speichern", class: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" %>
+      </div>
+    <% end %>
+
+    <div class="mt-8 pt-6 border-t border-gray-200">
+        <h3 class="text-lg font-semibold mb-4 text-[#2C2C2C]">Bexio Verbindung</h3>
+        <div class="flex justify-between items-center mb-6">
+            <% if @client_id.present? && @client_secret.present? %>
+               <% if Setting[:bexio_access_token].present? %>
+                  <div class="flex items-center space-x-4">
+                     <div class="flex items-center text-green-600 font-bold bg-green-50 px-3 py-1 rounded-full">
+                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                       </svg>
+                       Status: Verbunden
+                     </div>
+                     
+                     <%= button_to "Kontodaten importieren", accounting_import_accounts_path, method: :post, class: "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded text-sm transition shadow-sm" %>
+                  </div>
+               <% else %>
+                  <div class="text-gray-500 italic">Nicht verbunden</div>
+                  <%= link_to "Connect to Bexio", accounting_bexio_auth_path, class: "bg-[#FFD100] hover:bg-yellow-400 text-gray-900 font-bold py-2 px-4 rounded shadow-sm inline-block" %>
+               <% end %>
+            <% else %>
+               <p class="text-sm text-gray-500">Bitte speichern Sie zuerst Ihre Credentials.</p>
+            <% end %>
+        </div>
+
+        <% if @bexio_accounts.present? %>
+            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 class="text-sm font-bold text-gray-700 mb-2">Importierte Konten (<%= @bexio_accounts.count %>)</h4>
+                <div class="max-h-64 overflow-y-auto">
+                    <ul class="space-y-1 text-sm text-gray-600">
+                        <% @bexio_accounts.each do |acc| %>
+                            <li class="flex justify-between border-b border-gray-200 py-1 last:border-0 hover:bg-gray-100 px-2 rounded">
+                                <div>
+                                    <span class="font-mono font-bold text-gray-800"><%= acc.account_number %></span>
+                                    <span class="text-xs text-gray-400 ml-1">(ID: <%= acc.bexio_id %>)</span>
+                                </div>
+                                <span><%= acc.name %></span>
+                            </li>
+                        <% end %>
+                    </ul>
+                </div>
+            </div>
+        <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gameorama-yellow: #FFD100;
+  --color-gameorama-dark: #2C2C2C;
+  --color-gameorama-darker: #1A1A1A;
+}

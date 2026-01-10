@@ -1,0 +1,140 @@
+<div class="max-w-7xl mx-auto">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="font-bold text-3xl text-[#2C2C2C]">Inventory: <%= @inventory.name %></h1>
+    <div class="space-x-2 flex items-center">
+      <% if @inventory.completed_at.present? %>
+         <span class="text-green-600 font-bold px-4 py-2 bg-green-50 rounded border border-green-200">Abgeschlossen (<%= @inventory.completed_at.strftime("%d.%m.%Y %H:%M") %>)</span>
+      <% else %>
+         <%= button_to "Abgeschlossen", complete_inventory_path(@inventory), method: :post, class: "bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white font-bold cursor-pointer", form_class: "inline-block" %>
+      <% end %>
+
+      <%= link_to "Edit Name", edit_inventory_path(@inventory), class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
+      <%= link_to "Back", inventories_path, class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
+      <%= link_to "PDF Report", report_inventory_path(@inventory), class: "bg-[#FFD100] hover:bg-yellow-400 px-4 py-2 rounded text-[#2C2C2C] font-bold cursor-pointer", target: "_blank" %>
+    </div>
+  </div>
+
+  <% if notice.present? %>
+    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-lg inline-block" id="notice"><%= notice %></p>
+  <% end %>
+
+  <div class="overflow-x-auto shadow-md rounded-lg mt-4 bg-white border border-gray-200">
+    <table class="w-full text-sm text-left text-gray-500">
+      <thead class="text-xs text-white uppercase bg-[#2C2C2C] sticky top-0">
+        <tr>
+          <th scope="col" class="px-6 py-4 w-1/4">Article</th>
+          <% @locations.each do |location| %>
+            <th scope="col" class="px-6 py-4 text-center"><%= location.name %></th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% @active_articles.each do |article| %>
+          <tr class="hover:bg-yellow-50">
+            <td class="px-6 py-4 font-medium text-gray-900 border-r border-gray-100">
+              <div class="font-bold">
+                <% if article.group.present? %>
+                  <span class="text-gray-500 font-normal mr-1"><%= article.group %></span>
+                <% end %>
+                <%= article.name %>
+              </div>
+              <div class="text-xs text-gray-400"><%= article.sku %></div>
+            </td>
+            <% @locations.each do |location| %>
+              <% 
+                 line = @inventory_lines[[article.id, location.id]] 
+                 qty = line ? line.quantity : 0
+              %>
+              <td class="px-4 py-2 text-center border-r border-gray-100 last:border-0">
+                <div class="flex items-center space-x-2 justify-center">
+                  <input type="number" 
+                         value="<%= qty %>" 
+                         class="w-20 text-center border border-gray-300 rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100] inventory-input disabled:bg-gray-100 disabled:text-gray-500"
+                         data-article-id="<%= article.id %>"
+                         data-location-id="<%= location.id %>"
+                         data-inventory-id="<%= @inventory.id %>"
+                         <%= 'disabled' if @inventory.completed_at.present? %>
+                  >
+                  <span class="text-xs font-mono text-gray-500 w-8 text-right diff-value">
+                    <%= (line && line.diff.to_i != 0) ? format('%+d', line.diff) : '-' %>
+                  </span>
+                </div>
+                <% unless @inventory.completed_at.present? %>
+                  <div class="text-xs text-green-600 hidden saved-indicator opacity-0 transition-opacity duration-500 text-center">Saved</div>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const inputs = document.querySelectorAll(".inventory-input");
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    inputs.forEach(input => {
+      input.addEventListener("blur", async (e) => {
+        const el = e.target;
+        const articleId = el.dataset.articleId;
+        const locationId = el.dataset.locationId;
+        const inventoryId = el.dataset.inventoryId;
+        const quantity = el.value;
+
+        // Indicator is no longer immediate sibling, found later via container
+
+        try {
+          const response = await fetch(`/inventories/${inventoryId}/update_line`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken
+            },
+            body: JSON.stringify({
+              article_id: articleId,
+              location_id: locationId,
+              quantity: quantity
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Update diff display
+            const diffEl = el.nextElementSibling; 
+            if (data.diff != 0) {
+               diffEl.textContent = (data.diff > 0 ? "+" : "") + data.diff;
+               diffEl.className = `text-xs font-mono w-8 text-right diff-value ${data.diff < 0 ? 'text-red-500 font-bold' : 'text-green-600 font-bold'}`;
+            } else {
+               diffEl.textContent = "-";
+               diffEl.className = "text-xs font-mono w-8 text-right diff-value text-gray-500";
+            }
+
+            // Show saved indicator temporarily
+            const container = el.parentElement.parentElement;
+            const indicator = container.querySelector('.saved-indicator');
+            
+            indicator.classList.remove("hidden", "opacity-0");
+            setTimeout(() => {
+              indicator.classList.add("opacity-0");
+             setTimeout(() => indicator.classList.add("hidden"), 500); 
+            }, 1000);
+            
+            // Highlight box briefly
+            el.classList.add("bg-green-50");
+            setTimeout(() => el.classList.remove("bg-green-50"), 2000); 
+          } else {
+            console.error("Failed to save");
+            el.classList.add("bg-red-50", "border-red-500");
+          }
+        } catch (err) {
+          console.error("Error:", err);
+          el.classList.add("bg-red-50", "border-red-500");
+        }
+      });
+    });
+  });
+</script>

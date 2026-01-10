@@ -1,0 +1,90 @@
+<div class="w-full">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="font-bold text-3xl text-[#2C2C2C]">Waren bestellen</h1>
+    <%= form_with url: stock_orders_path, method: :get, class: "flex items-center" do |f| %>
+      <%= f.select :supplier_id, options_from_collection_for_select(@suppliers, :id, :name, @selected_supplier_id), { include_blank: "Alle Lieferanten" }, { onchange: "this.form.requestSubmit()", class: "block w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#FFD100] focus:border-[#FFD100] sm:text-sm rounded-md shadow-sm cursor-pointer border" } %>
+    <% end %>
+  </div>
+
+  <% if @locations.empty? %>
+    <div class="text-center p-12 bg-white rounded-lg shadow">
+       <p class="text-gray-500">No locations defined. Please create a location first.</p>
+    </div>
+  <% else %>
+    <div class="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+           <thead class="bg-gray-50">
+             <tr>
+               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 shadow-sm border-r border-gray-200">
+                 Artikel
+               </th>
+               <% @sorted_locations.each_with_index do |location, index| %>
+                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider <%= 'bg-yellow-50 text-yellow-800 border-x border-yellow-200' if @primary_location && location.id == @primary_location.id %>">
+                   <%= location.name %>
+                   <% if @primary_location && location.id == @primary_location.id %>
+                      <span class="block text-[10px] lowercase font-normal">(Primary)</span>
+                   <% end %>
+                 </th>
+               <% end %>
+               <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">
+                  Verkauft (30d)
+               </th>
+               <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">
+                  Aktionen
+               </th>
+             </tr>
+           </thead>
+           <tbody class="bg-white divide-y divide-gray-200">
+             <% @grouped_articles.each do |category, articles| %>
+               <!-- Category Header -->
+               <tr class="bg-gray-100 border-y border-gray-200">
+                  <td colspan="<%= 3 + @sorted_locations.count %>" class="px-6 py-3 text-left font-bold text-gray-700 uppercase tracking-wider sticky left-0 z-20 bg-gray-100">
+                     <%= category&.name || "Unkategorisiert" %>
+                  </td>
+               </tr>
+
+               <% articles.each do |article| %>
+                 <% 
+                    total_stock = 0
+                    # We need to sum exactly the stocks for locations we are displaying to be consistent
+                    @sorted_locations.each do |loc|
+                       st = article.stocks.find { |s| s.location_id == loc.id }
+                       total_stock += (st&.quantity || 0)
+                    end
+                    
+                    sales_30d = @recent_sales[article.id] || 0
+                 %>
+                 <tr class="hover:bg-gray-50 transition border-b border-gray-100">
+                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-200 hover:bg-gray-50">
+                     <%= link_to "#{article.group.present? ? "#{article.group} - " : ""}#{article.name}", edit_article_path(article, return_to: request.original_url), class: "hover:text-[#FFD100] transition-colors" %>
+                     <div class="text-xs text-gray-400 font-normal"><%= article.sku %></div>
+                   </td>
+                   <% @sorted_locations.each do |location| %>
+                     <% 
+                        stock = article.stocks.find { |s| s.location_id == location.id }
+                        qty = stock&.quantity || 0
+                     %>
+                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right <%= 'bg-yellow-50/50 font-bold border-x border-yellow-100' if @primary_location && location.id == @primary_location.id %>">
+                        <span class="<%= 'text-red-500' if qty <= 0 %>">
+                          <%= qty %>
+                        </span>
+                     </td>
+                   <% end %>
+                   <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono border-l border-gray-200">
+                       <%= sales_30d %>
+                   </td>
+                   <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono border-l border-gray-200">
+                       <% if total_stock <= 0 && sales_30d == 0 %>
+                          <%= button_to "Inaktiv setzen", article_path(article), method: :patch, params: { article: { status: 'inactive' }, return_to: request.original_url }, class: "text-red-600 hover:text-red-800 text-xs font-bold border border-red-200 bg-red-50 hover:bg-red-100 rounded px-2 py-1 transition" %>
+                       <% end %>
+                   </td>
+                 </tr>
+               <% end %>
+             <% end %>
+           </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>

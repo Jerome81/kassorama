@@ -1,0 +1,108 @@
+<div class="w-full">
+  <div class="flex justify-between items-center mb-8">
+    <h1 class="font-bold text-4xl text-[#2C2C2C]">Transaktionen: <%= @cash_register.name %></h1>
+    <%= link_to "Zurück", pos_path(@cash_register), class: "rounded-lg py-3 px-5 bg-gray-200 text-[#2C2C2C] block font-bold hover:bg-gray-300 transition" %>
+  </div>
+
+  <% if @history_by_day.empty? %>
+    <p class="text-gray-500">Keine Transaktionen gefunden.</p>
+  <% else %>
+    <% @history_by_day.each do |day, rows| %>
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-[#2C2C2C] mb-4"><%= day.strftime("%d.%m.%Y") %></h2>
+        <div class="overflow-x-auto shadow-md sm:rounded-lg">
+          <table class="w-full text-sm text-left text-gray-500">
+            <thead class="text-xs text-white uppercase bg-[#2C2C2C]">
+              <tr>
+                <th scope="col" class="px-6 py-3">Zahlart</th>
+                <th scope="col" class="px-6 py-3">User</th>
+                <th scope="col" class="px-6 py-3">Details</th>
+                <th scope="col" class="px-6 py-3 text-right">Total</th>
+                <th scope="col" class="px-6 py-3 text-right">Rabatt</th>
+                <th scope="col" class="px-6 py-3 text-right">Netto</th>
+                <th scope="col" class="px-6 py-3 text-right">Kassenstand</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% rows.each do |row| %>
+                <% 
+                   type = row[:type]
+                   obj = row[:data]
+                   balance = row[:balance]
+                %>
+                <tr class="bg-white border-b hover:bg-gray-50">
+                  <td class="px-6 py-4 font-medium text-gray-900">
+                    <div class="flex flex-col">
+                      <% if type == 'order' %>
+                         <span><%= obj.payment_method.present? ? obj.payment_method.titleize : '-' %></span>
+                      <% else %>
+                         <span><%= obj.transaction_type == 'removal' ? 'Entnahme' : 'Kassensturz' %></span>
+                      <% end %>
+                      <span class="text-xs text-gray-400"><%= row[:timestamp].strftime("%H:%M") %></span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-gray-700">
+                     <%= obj.user_name %>
+                  </td>
+                  <td class="px-6 py-4">
+                     <div class="max-w-md break-words">
+                        <% if type == 'order' %>
+                            <% 
+                               items_summary = obj.order_items.map { |item| "#{item.quantity}x #{item.article.name}" }.join(", ")
+                               total_qty = obj.order_items.sum(&:quantity)
+                            %>
+                            <span class="font-bold"><%= total_qty %> Stk:</span> <%= items_summary %>
+                        <% else %>
+                            <!-- Transaction Description -->
+                            <%= obj.description %>
+                        <% end %>
+                     </div>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <% if type == 'order' %>
+                        <% subtotal = (obj.total_amount || 0) + (obj.discount || 0) %>
+                        <%= number_to_currency(subtotal, unit: "CHF", format: "%n %u") %>
+                    <% else %>
+                        <!-- Empty for Transactions as requested -->
+                        -
+                    <% end %>
+                  </td>
+                  <td class="px-6 py-4 text-right text-red-500">
+                     <% if type == 'order' && obj.discount.to_f > 0 %>
+                        -<%= number_to_currency(obj.discount, unit: "CHF", format: "%n %u") %>
+                     <% else %>
+                        -
+                     <% end %>
+                  </td>
+                  <td class="px-6 py-4 text-right font-bold">
+                     <% if type == 'order' %>
+                        <%= number_to_currency(obj.total_amount, unit: "CHF", format: "%n %u") %>
+                     <% else %>
+                        <!-- Transaction Amount -->
+                        <% 
+                           display_amount = obj.amount 
+                           # Removals are positive values but represent money leaving.
+                           # Reconciliation diffs can be pos/neg. 
+                           # If removal, show as negative? Or just amount?
+                           # Requirement: "amount into Netto".
+                           # Typically removals are shown as negative flow? 
+                           # But amount stored is positive. Let's just output the amount, possibly with sign if reconcil.
+                           if obj.transaction_type == 'removal'
+                              display_amount = -obj.amount 
+                           end
+                        %>
+                        <%= number_to_currency(display_amount, unit: "CHF", format: "%n %u") %>
+                     <% end %>
+                  </td>
+                  <td class="px-6 py-4 text-right font-mono">
+                    <%= number_to_currency(balance, unit: "CHF", format: "%n %u") %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+</div>

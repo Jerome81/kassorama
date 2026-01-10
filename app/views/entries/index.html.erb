@@ -1,0 +1,170 @@
+<div class="mx-auto max-w-7xl px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-[#2C2C2C]">Buchungen</h1>
+    <div class="flex space-x-2">
+       <%= link_to "Bexio Einstellungen", accounting_settings_path, class: "bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded text-sm" %>
+    </div>
+  </div>
+
+  <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 text-sm">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Datum</th>
+            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Soll</th>
+            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Haben</th>
+            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Beschreibung</th>
+             <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">MWST Code</th>
+            <th scope="col" class="px-3 py-3 text-right font-medium text-gray-500 uppercase tracking-wider">Betrag</th>
+            <th scope="col" class="px-3 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Ref</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @entries.group_by(&:booking_date).each do |date, entries_on_day| %>
+            <!-- Date Group Header -->
+            <tr class="bg-gray-100 border-t-2 border-gray-200">
+               <td colspan="7" class="px-4 py-2 font-bold text-gray-800">
+                 <%= date&.strftime("%d.%m.%Y") || "Ohne Datum" %>
+               </td>
+            </tr>
+            
+            <% entries_on_day.each do |entry| %>
+              <tr class="hover:bg-gray-50 group transition duration-150" data-entry-id="<%= entry.id %>">
+                <td class="p-1">
+                   <input type="date" name="booking_date" value="<%= entry.booking_date %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" title="Booking Date">
+                </td>
+                <td class="p-1">
+                   <input type="text" name="debit_account" value="<%= entry.debit_account %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Soll">
+                </td>
+                <td class="p-1">
+                   <input type="text" name="credit_account" value="<%= entry.credit_account %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Haben">
+                </td>
+                <td class="p-1">
+                   <input type="text" name="description" value="<%= entry.description %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Beschreibung">
+                </td>
+                <td class="p-1">
+                   <input type="text" name="tax_code" value="<%= entry.tax_code %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Tax">
+                </td>
+                <td class="p-1">
+                   <input type="number" step="0.01" name="amount" value="<%= "%.2f" % (entry.amount || 0) %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-right font-mono font-bold text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="0.00">
+                </td>
+                <td class="p-1">
+                   <input type="text" name="reference_number" value="<%= entry.reference_number %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-xs text-gray-500 hover:bg-white focus:bg-white transition-colors" placeholder="Ref">
+                </td>
+              </tr>
+            <% end %>
+
+            <!-- Summary / Export Preview -->
+            <tr class="bg-indigo-50 border-t-2 border-indigo-100">
+               <td colspan="7" class="px-3 py-2 text-xs font-bold text-indigo-800 uppercase tracking-wider">
+                 Export Vorschau (Bexio Zusammenfassung)
+               </td>
+            </tr>
+            <% 
+               summary = entries_on_day.group_by { |e| [e.debit_account, e.credit_account, e.tax_code] }
+            %>
+            <% summary.each do |(debit, credit, tax), group| %>
+               <% sum = group.sum(&:amount) %>
+               <tr class="bg-indigo-50 text-indigo-900 border-b border-indigo-100 last:border-0 hover:bg-indigo-100 transition-colors">
+                 <td class="px-3 py-1 text-xs text-indigo-400"><%= date&.strftime("%d.%m.%Y") %></td>
+                 <td class="px-3 py-1 font-mono text-xs"><%= debit %></td>
+                 <td class="px-3 py-1 font-mono text-xs"><%= credit %></td>
+                 <td class="px-3 py-1 text-xs italic opacity-75">Tagesumsatz Zusammenfassung</td>
+                 <td class="px-3 py-1 text-center text-xs"><%= tax %></td>
+                 <td class="px-3 py-1 text-right font-mono font-bold text-sm"><%= number_to_currency(sum, unit: '') %></td>
+                 <td class="px-3 py-1 text-xs text-indigo-400"><%= group.count %> Buchungen</td>
+               </tr>
+            <% end %>
+            <tr class="bg-indigo-50 border-b-2 border-indigo-100">
+               <td colspan="7" class="px-3 py-2 text-right">
+                  <%= button_to "Diesen Tag exportieren (#{date.strftime('%d.%m.%Y')})", accounting_export_bexio_path(date: date), method: :post, class: "bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-3 rounded text-xs transition" %>
+               </td>
+            </tr>
+            <tr class="h-6 bg-white"><td colspan="7"></td></tr>
+          <% end %>
+
+          <% if @entries.empty? %>
+            <tr>
+              <td colspan="7" class="px-3 py-4 text-center text-gray-500">Keine Buchungen gefunden.</td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('turbo:load', () => {
+      // Re-attach listeners on turbo load
+      setupEditableFields();
+  });
+  
+  // Also run on initial load if not using Turbo
+  if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setupEditableFields);
+  } else {
+      setupEditableFields();
+  }
+
+  function setupEditableFields() {
+      document.querySelectorAll('.editable-field').forEach(input => {
+          if (input.dataset.listenerAttached) return;
+          input.dataset.listenerAttached = "true";
+
+          input.addEventListener('blur', function() {
+              const row = this.closest('tr');
+              if (!row) return; 
+              
+              const entryId = row.dataset.entryId;
+              const fieldName = this.name;
+              const value = this.value;
+              
+              const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+              
+              // Visual feedback: Saving...
+              this.classList.add('bg-yellow-50');
+              
+              fetch(`/entries/${entryId}`, {
+                  method: 'PATCH',
+                  headers: {
+                      'Content-Type': 'application/json',
+                      'X-CSRF-Token': csrfToken,
+                      'Accept': 'application/json'
+                  },
+                  body: JSON.stringify({
+                      entry: {
+                          [fieldName]: value
+                      }
+                  })
+              })
+              .then(response => {
+                  this.classList.remove('bg-yellow-50');
+                  if (!response.ok) {
+                      // Error
+                      this.classList.add('bg-red-100');
+                      console.error("Update failed");
+                  } else {
+                       // Success
+                       this.classList.add('bg-green-50');
+                       setTimeout(() => {
+                            this.classList.remove('bg-green-50');
+                       }, 1000);
+                  }
+              })
+              .catch(error => {
+                   this.classList.remove('bg-yellow-50');
+                   this.classList.add('bg-red-100');
+                   console.error("Network error", error);
+              });
+          });
+          
+          input.addEventListener('keypress', function(e) {
+              if (e.key === 'Enter') {
+                  this.blur();
+              }
+          });
+      });
+  }
+</script>
