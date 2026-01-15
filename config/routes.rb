@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  resources :suppliers
   get 'revolut_transactions/index'
   get 'login', to: 'sessions#new'
   post 'login', to: 'sessions#create'

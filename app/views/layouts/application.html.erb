@@ -100,7 +100,8 @@
               <h3 class="px-3 text-xs font-bold text-[#FFD100] uppercase tracking-wider mb-2">Admin</h3>
               <div class="space-y-1 ml-6">
                  <%= link_to "Benutzer", users_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(users_path)}" %>
-                <%= link_to "Kategorien", article_categories_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(article_categories_path)}" %>
+                 <%= link_to "Kategorien", article_categories_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(article_categories_path)}" %>
+                 <%= link_to "Lieferanten", suppliers_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(suppliers_path)}" %>
                  <%= link_to "MWSt Codes", tax_codes_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(tax_codes_path)}" %>
                  <%= link_to "Artikel Statistik", article_stats_index_path, class: "group flex items-center px-3 py-2 text-sm font-normal rounded-md text-white hover:text-[#FFD100] hover:bg-gray-700 #{'bg-gray-700 text-[#FFD100]' if request.path.include?(article_stats_index_path)}" %>
                  </div>

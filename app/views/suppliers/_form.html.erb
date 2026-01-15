@@ -1,0 +1,23 @@
+<%= form_with(model: supplier, local: true, class: "space-y-8 divide-y divide-gray-200") do |form| %>
+  <div class="space-y-8 divide-y divide-gray-200">
+    <div>
+      <div class="mt-6 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6 pl-6">
+        
+        <div class="sm:col-span-4">
+          <%= form.label :name, "Name", class: "block text-sm font-medium text-gray-700" %>
+          <div class="mt-1">
+            <%= form.text_field :name, class: "shadow-sm focus:ring-[#FFD100] focus:border-[#FFD100] block w-full sm:text-sm border-gray-300 rounded-md" %>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="pt-5 pl-6">
+    <div class="flex justify-end">
+      <%= link_to 'Cancel', suppliers_path, class: "bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FFD100]" %>
+      <%= form.submit "Speichern", class: "ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-black bg-[#FFD100] hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 cursor-pointer" %>
+    </div>
+  </div>
+<% end %>
