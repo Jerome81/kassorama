@@ -114,17 +114,27 @@ class BexioService
             raise "Could not find Bexio Account ID for #{line[:debit_account]} or #{line[:credit_account]}"
         end
         
-        # User requested specific format.
-        # Handling Tax: The user provided example uses 'tax_id': 3, 'tax_account_id': 77.
-        # We will map fields if available, otherwise use defaults or nil.
+        # Look up Tax ID
+        tax_id = nil
+        tax_account_id = nil
+        
+        if line[:tax_code].present?
+          # Looks up the tax code (e.g. 'UN81') in the imported Bexio tax codes
+          if tax_obj = BexioTaxCode.find_by(name: line[:tax_code])
+             tax_id = tax_obj.bexio_id.to_i
+             # If tax is present, we need a tax_account_id. 
+             # Assuming usually the same as credit_account_id or handled by Bexio logic implies booking account.
+             tax_account_id = credit_id 
+          end
+        end
         
         entry_line = {
             description: line[:description],
             amount: line[:amount].to_f,
             debit_account_id: debit_id,
             credit_account_id: credit_id,
-            tax_id: 3, # Needs mapping if tax is present
-            tax_account_id: credit_id, # Needs to be either debit_id or credit_id
+            tax_id: tax_id, 
+            tax_account_id: tax_account_id, 
             currency_id: 1, # Default to CHF?
             currency_factor: 1
         }
@@ -159,6 +169,18 @@ class BexioService
         JSON.parse(response.body)
     else
         raise "Failed to fetch Bexio accounts: #{response.code} - #{response.body}"
+    end
+  end
+
+  def fetch_taxes
+    # GET /3.0/taxes
+    url = "#{BEXIO_API_URL_30}/taxes"
+    response = request(:get, url)
+    
+    if response.code.to_i == 200
+      JSON.parse(response.body)
+    else
+      raise "Failed to fetch Bexio taxes: #{response.code} - #{response.body}"
     end
   end
 

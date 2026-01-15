@@ -1,0 +1,35 @@
+<div class="nested-fields border border-gray-200 rounded p-4 mb-4 bg-gray-50 relative">
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <%= f.label :name, class: "block font-medium text-gray-700" %>
+      <%= f.text_field :name, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
+    </div>
+    
+    <div>
+      <%= f.label :barcode, class: "block font-medium text-gray-700" %>
+      <%= f.text_field :barcode, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
+    </div>
+
+    <div>
+      <%= f.label :price, class: "block font-medium text-gray-700" %>
+      <%= f.number_field :price, step: 0.01, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
+    </div>
+    
+    <div>
+       <%= f.label :image, "Bild Upload", class: "block font-medium text-gray-700" %>
+       <%= f.file_field :image, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100" %>
+       <% if f.object.image.attached? && f.object.persisted? %>
+          <div class="mt-2">
+            <%= image_tag f.object.image, class: "rounded shadow-sm border border-gray-200 h-20 w-auto object-cover" %>
+          </div>
+       <% end %>
+    </div>
+  </div>
+
+  <div class="mt-4 flex justify-end">
+    <div>
+      <%= f.check_box :_destroy, class: "rounded border-gray-300 text-red-600 focus:ring-red-500" %>
+      <%= f.label :_destroy, "Remove Variant", class: "text-red-600 font-medium ml-1" %>
+    </div>
+  </div>
+</div>

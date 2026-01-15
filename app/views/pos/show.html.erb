@@ -153,7 +153,12 @@
 
       
       <!-- Cart Table (Scrollable) -->
-      <div class="bg-white shadow overflow-hidden sm:rounded-lg flex-grow overflow-y-auto mb-4 border border-gray-200">
+      <div class="bg-white shadow overflow-hidden sm:rounded-lg flex-grow overflow-y-auto mb-4 border border-gray-200 flex flex-col">
+        <% if @order&.name.present? %>
+            <div class="bg-yellow-50 px-4 py-2 border-b border-yellow-100 flex justify-between items-center">
+                <h2 class="text-lg font-bold text-yellow-800">Rechnung: <%= @order.name %></h2>
+            </div>
+        <% end %>
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50 sticky top-0">
             <tr>
@@ -166,8 +171,13 @@
           <tbody class="bg-white divide-y divide-gray-200">
             <% @order_items.each do |item| %>
               <tr>
-                <td class="px-3 py-2 cursor-pointer hover:bg-gray-50 transition" onclick="openItemDiscountModal('<%= item.id %>', <%= item.quantity * item.unit_price %>, '<%= j item.article.name %>')">
-                  <div class="text-sm font-medium text-gray-900"><%= item.article.name %></div>
+                <td class="px-3 py-2 cursor-pointer hover:bg-gray-50 transition" onclick="openItemDiscountModal('<%= item.id %>', <%= item.quantity * item.unit_price %>, '<%= j(item.variant ? "#{item.article.name} - #{item.variant.name}" : item.article.name) %>')">
+                  <div class="text-sm font-medium text-gray-900">
+                    <%= item.article.name %>
+                    <% if item.variant %>
+                       <span class="text-xs text-gray-500 block"><%= item.variant.name %></span>
+                    <% end %>
+                  </div>
                   <div class="text-xs text-gray-500"><%= number_to_currency(item.unit_price, unit: '') %></div>
                 </td>
                 <td class="px-3 py-2 text-right whitespace-nowrap text-sm text-gray-500">
@@ -245,13 +255,64 @@
           <%= f.hidden_field :name, id: "park-order-name" %>
       <% end %>
 
+<div id="park-order-modal" class="hidden fixed inset-0 w-full h-full bg-gray-600 bg-opacity-50 z-[9999] grid place-items-center">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+        <h3 class="text-lg font-bold mb-4">Bestellung parken</h3>
+        <p class="text-sm text-gray-500 mb-4">Bitte geben Sie einen Namen für die Bestellung ein:</p>
+        
+        <div class="mb-4">
+             <input type="text" id="modal-park-order-name-input" class="w-full border-gray-300 rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100]" placeholder="Name">
+        </div>
+        
+        <div class="flex justify-end gap-2">
+            <button onclick="document.getElementById('park-order-modal').classList.add('hidden')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded font-medium">Abbrechen</button>
+            <button onclick="confirmParkOrder()" class="px-6 py-2 bg-[#FFD100] hover:bg-yellow-400 text-gray-900 font-bold rounded shadow-sm">Parken</button>
+        </div>
+    </div>
+</div>
+
       <script>
           function parkOrder() {
+              const currentOrderName = "<%= j @order&.name %>";
+              
+              if (currentOrderName && currentOrderName.trim() !== "") {
+                  document.getElementById("park-order-name").value = currentOrderName;
+                  document.getElementById("park-order-form").requestSubmit();
+                  return;
+              }
+
               const defaultName = "<%= @cash_register.name %> - <%= Time.current.strftime('%d.%m.%Y %H:%M') %>";
-              const name = prompt("Name für zurückgestellte Bestellung:", defaultName);
-              if (name !== null) {
+              const input = document.getElementById('modal-park-order-name-input');
+              input.value = defaultName;
+              
+              document.getElementById('park-order-modal').classList.remove('hidden');
+              
+              // Focus and select text
+              setTimeout(() => {
+                  input.focus();
+                  input.select();
+              }, 100);
+
+              // Handle Enter key
+              input.onkeydown = function(e) {
+                  if (e.key === 'Enter') {
+                      e.preventDefault();
+                      confirmParkOrder();
+                  } else if (e.key === 'Escape') {
+                      document.getElementById('park-order-modal').classList.add('hidden');
+                  }
+              };
+          }
+
+          function confirmParkOrder() {
+              const name = document.getElementById('modal-park-order-name-input').value;
+              if (name && name.trim() !== "") {
                   document.getElementById("park-order-name").value = name;
                   document.getElementById("park-order-form").requestSubmit();
+                  document.getElementById('park-order-modal').classList.add('hidden');
+              } else {
+                  // Optional: highlight error
+                  document.getElementById('modal-park-order-name-input').classList.add('border-red-500');
               }
           }
       </script>
@@ -287,7 +348,9 @@
                 <div class="bg-white p-3 rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-[#FFD100] transition h-full flex flex-col">
                   <!-- Image placeholder if available, or just name -->
                   <div class="h-24 bg-gray-100 rounded mb-2 flex items-center justify-center overflow-hidden">
-                    <% if article.picture.present? %>
+                    <% if article.image.attached? %>
+                         <%= image_tag article.image, class: "object-cover h-full w-full" %>
+                    <% elsif article.picture.present? %>
                         <img src="<%= article.picture %>" alt="<%= article.name %>" class="object-cover h-full w-full">
                     <% else %>
                         <span class="text-gray-400 text-xs">No Img</span>
@@ -309,6 +372,8 @@
     </div>
   </div>
 </div>
+
+<div id="modal-container"></div>
 
 
 

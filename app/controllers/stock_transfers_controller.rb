@@ -25,38 +25,65 @@ class StockTransfersController < ApplicationController
     @suppliers = Supplier.all.order(:name)
     @selected_supplier_id = params[:supplier_id]
 
-    scope = Article.where(status: 'active').includes(:stocks, :article_category)
+    scope = Article.where(status: 'active').includes(:stocks, :article_category, variants: [:stocks])
     scope = scope.where(supplier_id: @selected_supplier_id) if @selected_supplier_id.present?
     
-    # Select articles matching criteria: Primary Stock < Sales 30d AND Other Locations Stock > 0
-    @articles = scope.select do |article|
-      sales_30d = @recent_sales[article.id] || 0
-      
-      # Stock in Primary
-      primary_stock_record = article.stocks.find { |s| s.location_id == @primary_location.id }
-      primary_qty = primary_stock_record&.quantity || 0
+    # Preload variant sales
+    @recent_variant_sales = OrderItem.joins(:order)
+                                     .where(orders: { updated_at: 30.days.ago.beginning_of_day..Time.current, status: 'completed' })
+                                     .where.not(variant_id: nil)
+                                     .group(:variant_id)
+                                     .sum(:quantity)
 
-      # Stock in Others
-      other_qty = 0
+    # Select articles matching criteria:
+    # 1. Article Global: Primary available < Sales 30d AND Other Locations have stock
+    # OR
+    # 2. Variant Specific: Variant Primary < Variant Sales 30d AND Variant has stock in others
+    @recommended_articles = scope.select do |article|
+      # --- Article Level Check (Aggregated) ---
+      global_sales_30d = @recent_sales[article.id] || 0
+      
+      # Sum all stock for this article (including variants)
+      global_primary_qty = article.stocks.select { |s| s.location_id == @primary_location.id }.sum { |s| s.quantity || 0 }
+
+      global_other_qty = 0
       @other_locations.each do |loc|
-         st = article.stocks.find { |s| s.location_id == loc.id }
-         other_qty += (st&.quantity || 0)
+         qty = article.stocks.select { |s| s.location_id == loc.id }.sum { |s| s.quantity || 0 }
+         global_other_qty += qty
+      end
+      
+      article_needs_stock = (global_primary_qty < global_sales_30d) && (global_other_qty > 0)
+
+      # --- Variant Level Check ---
+      variant_needs_stock = false
+      if article.variants.any? # Don't need to load if already loaded in includes
+         variant_needs_stock = article.variants.any? do |v|
+            v_sales = @recent_variant_sales[v.id] || 0
+            v_primary = v.stocks.find { |s| s.location_id == @primary_location.id }&.quantity || 0
+            
+            v_other_qty = 0
+            @other_locations.each do |loc|
+               st = v.stocks.find { |s| s.location_id == loc.id }
+               v_other_qty += (st&.quantity || 0)
+            end
+            
+            (v_primary < v_sales) && (v_other_qty > 0)
+         end
       end
 
-      (primary_qty < sales_30d) && (other_qty > 0)
+      article_needs_stock || variant_needs_stock
     end
 
-    # Sort articles by Group then Name
-    sorted_articles = @articles.sort_by do |article|
-      [article.group.to_s, article.name]
-    end
+    # Group Recommended
+    @grouped_recommended = @recommended_articles.sort_by(&:name).group_by(&:article_category)
 
-    # Group by category
-    @grouped_articles = sorted_articles.group_by(&:article_category)
+    # Group All
+    @grouped_all = scope.sort_by(&:name).group_by(&:article_category)
   end
 
   def create
     article = Article.find(params[:article_id])
+    variant_id = params[:variant_id]
     quantity = params[:quantity].to_i
     source_location = Location.find(params[:source_location_id])
     
@@ -76,11 +103,22 @@ class StockTransfersController < ApplicationController
       return
     end
 
-    source_stock = article.stocks.find_or_initialize_by(location: source_location)
+    if variant_id.present?
+       variant = Variant.find(variant_id)
+       source_stock = article.stocks.find_or_initialize_by(location: source_location, variant: variant)
+       
+       primary_stock = article.stocks.find_or_initialize_by(location: primary_location, variant: variant)
+       item_name = "#{article.name} - #{variant.name}"
+    else
+       source_stock = article.stocks.find_or_initialize_by(location: source_location, variant: nil)
+       primary_stock = article.stocks.find_or_initialize_by(location: primary_location, variant: nil)
+       item_name = article.name
+    end
+
     current_source_qty = source_stock.quantity || 0
     
     if current_source_qty < quantity
-      redirect_to stock_transfers_path(supplier_id: current_supplier_id), alert: "Not enough stock in #{source_location.name} (Available: #{current_source_qty})"
+      redirect_to stock_transfers_path(supplier_id: current_supplier_id), alert: "Not enough stock for #{item_name} in #{source_location.name} (Available: #{current_source_qty})"
       return
     end
 
@@ -90,11 +128,10 @@ class StockTransfersController < ApplicationController
       source_stock.save!
       
       # Add to primary
-      primary_stock = article.stocks.find_or_initialize_by(location: primary_location)
       primary_stock.quantity = (primary_stock.quantity || 0) + quantity
       primary_stock.save!
     end
 
-    redirect_to stock_transfers_path(supplier_id: current_supplier_id), notice: "Successfully moved #{quantity}x #{article.name} from #{source_location.name} to #{primary_location.name}"
+    redirect_to stock_transfers_path(supplier_id: current_supplier_id), notice: "Successfully moved #{quantity}x #{item_name} from #{source_location.name} to #{primary_location.name}"
   end
 end

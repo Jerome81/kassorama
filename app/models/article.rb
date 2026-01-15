@@ -7,6 +7,9 @@ class Article < ApplicationRecord
   has_many :article_sections, dependent: :destroy
   has_many :sections, through: :article_sections
   has_many :order_items
+  has_many :variants, dependent: :destroy
+  accepts_nested_attributes_for :variants, allow_destroy: true, reject_if: :all_blank
+  has_one_attached :image
 
   validates :name, presence: true
   validates :sku, presence: true, uniqueness: true

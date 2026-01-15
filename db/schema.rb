@@ -10,7 +10,35 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_14_212704) do
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "record_type", null: false
+    t.bigint "record_id", null: false
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "filename", null: false
+    t.string "content_type"
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.datetime "created_at", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
   create_table "article_categories", force: :cascade do |t|
     t.string "name"
     t.datetime "created_at", null: false
@@ -36,7 +64,6 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
     t.integer "sales_count"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "group"
     t.integer "tax_code_id"
     t.decimal "cost", precision: 10, scale: 2
     t.string "price_type", default: "fixed"
@@ -54,6 +81,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
   create_table "bexio_accounts", force: :cascade do |t|
     t.string "bexio_id"
     t.string "account_number"
+    t.string "name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "bexio_tax_codes", force: :cascade do |t|
+    t.string "bexio_id"
     t.string "name"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -98,9 +132,11 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "diff"
+    t.integer "variant_id"
     t.index ["article_id"], name: "index_inventory_lines_on_article_id"
     t.index ["inventory_id"], name: "index_inventory_lines_on_inventory_id"
     t.index ["location_id"], name: "index_inventory_lines_on_location_id"
+    t.index ["variant_id"], name: "index_inventory_lines_on_variant_id"
   end
 
   create_table "locations", force: :cascade do |t|
@@ -120,8 +156,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
     t.decimal "gross_price", precision: 10, scale: 2
     t.decimal "discount", precision: 10, scale: 2
     t.decimal "net_price", precision: 10, scale: 2
+    t.integer "variant_id"
     t.index ["article_id"], name: "index_order_items_on_article_id"
     t.index ["order_id"], name: "index_order_items_on_order_id"
+    t.index ["variant_id"], name: "index_order_items_on_variant_id"
   end
 
   create_table "orders", force: :cascade do |t|
@@ -139,9 +177,24 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
     t.index ["cash_register_id"], name: "index_orders_on_cash_register_id"
   end
 
+  create_table "revolut_transactions", force: :cascade do |t|
+    t.date "date"
+    t.string "state"
+    t.string "description"
+    t.string "payer"
+    t.decimal "original_amount"
+    t.string "original_currency"
+    t.decimal "total_amount"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.date "exported"
+    t.string "debit_account"
+    t.string "credit_account"
+    t.string "tax_code"
+  end
+
   create_table "sections", force: :cascade do |t|
     t.string "name"
-    t.string "group_filter"
     t.integer "cash_register_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -162,8 +215,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
     t.integer "quantity"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "variant_id"
     t.index ["article_id"], name: "index_stocks_on_article_id"
     t.index ["location_id"], name: "index_stocks_on_location_id"
+    t.index ["variant_id"], name: "index_stocks_on_variant_id"
   end
 
   create_table "suppliers", force: :cascade do |t|
@@ -186,6 +241,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
     t.datetime "updated_at", null: false
     t.datetime "exported"
     t.string "user_name"
+    t.integer "cash_register_id"
+    t.index ["cash_register_id"], name: "index_transactions_on_cash_register_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -196,6 +253,19 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "variants", force: :cascade do |t|
+    t.integer "article_id", null: false
+    t.string "name"
+    t.string "barcode"
+    t.decimal "price", precision: 10, scale: 2
+    t.string "picture"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["article_id"], name: "index_variants_on_article_id"
+  end
+
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "article_sections", "articles"
   add_foreign_key "article_sections", "sections"
   add_foreign_key "articles", "article_categories"
@@ -205,10 +275,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_09_213937) do
   add_foreign_key "inventory_lines", "articles"
   add_foreign_key "inventory_lines", "inventories"
   add_foreign_key "inventory_lines", "locations"
+  add_foreign_key "inventory_lines", "variants"
   add_foreign_key "order_items", "articles"
   add_foreign_key "order_items", "orders"
+  add_foreign_key "order_items", "variants"
   add_foreign_key "orders", "cash_registers"
   add_foreign_key "sections", "cash_registers"
   add_foreign_key "stocks", "articles"
   add_foreign_key "stocks", "locations"
+  add_foreign_key "stocks", "variants"
+  add_foreign_key "transactions", "cash_registers"
+  add_foreign_key "variants", "articles"
 end

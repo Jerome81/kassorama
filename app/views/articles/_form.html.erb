@@ -45,6 +45,16 @@
         <%= form.label :sku, "Suchbegriff" %>
         <%= form.text_field :sku, id: "article_sku", readonly: true, class: "block shadow rounded-md border border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed outline-none px-3 py-2 mt-2 w-full" %>
       </div>
+
+      <div>
+        <%= form.label :image, "Bild" %>
+        <%= form.file_field :image, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100" %>
+        <% if article.image.attached? %>
+           <div class="mt-4">
+             <%= image_tag article.image, class: "rounded-lg shadow-sm border border-gray-200 w-32 h-32 object-cover" %>
+           </div>
+        <% end %>
+      </div>
     </div>
   </div>
 
@@ -86,7 +96,25 @@
       </div>
     </div>
   </div>
+  <div class="bg-white shadow rounded-lg mb-8">
+    <div class="px-6 py-6 border-b border-gray-200 sm:px-8 flex justify-between items-center">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Varianten</h3>
+      <button type="button" id="add-variant-btn" class="bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded font-medium text-sm border border-blue-200">
+         + Variante erstellen
+      </button>
+    </div>
+    <div class="px-6 py-8 sm:p-8 space-y-6" id="variants-container">
+       <%= form.fields_for :variants do |variant_form| %>
+          <%= render 'variant_fields', f: variant_form %>
+       <% end %>
+    </div>
+  </div>
 
+  <template id="variant-template">
+      <%= form.fields_for :variants, Variant.new, child_index: 'NEW_RECORD' do |variant_form| %>
+        <%= render 'variant_fields', f: variant_form %>
+      <% end %>
+  </template>
 
 
   <div class="inline">
@@ -154,9 +182,26 @@
         updateTaxState();
       }
 
+      function setupVariantManager() {
+        const addBtn = document.getElementById("add-variant-btn");
+        const container = document.getElementById("variants-container");
+        const template = document.getElementById("variant-template");
+        
+        if (!addBtn || !container || !template) return;
+        
+        if (addBtn.dataset.initialized) return;
+        addBtn.dataset.initialized = "true";
+
+        addBtn.addEventListener("click", () => {
+            const content = template.innerHTML.replace(/NEW_RECORD/g, new Date().getTime());
+            container.insertAdjacentHTML('beforeend', content);
+        });
+      }
+
       function init() {
         setupSkuUpdater();
         setupVoucherLogic();
+        setupVariantManager();
       }
 
       document.addEventListener("turbo:load", init);

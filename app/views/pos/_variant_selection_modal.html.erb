@@ -1,0 +1,31 @@
+<div id="variant-selection-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+  <div class="relative p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold text-gray-900">Select Variant: <%= article.name %></h3>
+      <button onclick="document.getElementById('variant-selection-modal').remove()" class="text-gray-400 hover:text-gray-500">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <% article.variants.each do |variant| %>
+        <%= button_to add_variant_item_pos_path(@cash_register, variant_id: variant.id, section_id: params[:section_id]), method: :post, class: "w-full text-left bg-white border border-gray-200 rounded-lg p-4 hover:border-[#FFD100] hover:shadow-md transition group" do %>
+           <div class="aspect-square w-full mb-3 rounded-md bg-gray-100 overflow-hidden relative">
+              <% if variant.image.attached? %>
+                 <%= image_tag variant.image, class: "w-full h-full object-cover" %>
+              <% else %>
+                 <div class="flex items-center justify-center h-full text-gray-300">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                 </div>
+              <% end %>
+           </div>
+           <div class="font-bold text-gray-900 group-hover:text-[#2C2C2C]"><%= variant.name %></div>
+           <div class="text-sm text-gray-500"><%= variant.barcode %></div>
+           <div class="font-bold text-[#2C2C2C] mt-2"><%= number_to_currency(variant.price) %></div>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -30,19 +30,38 @@
           <div class="border border-gray-200 rounded-lg overflow-hidden">
             <ul class="divide-y divide-gray-200">
               <% @search_results.each_with_index do |article, index| %>
-                <li class="p-3 hover:bg-gray-50">
-                  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <div>
-                      <p class="font-bold text-sm"><%= article.name %></p>
-                      <p class="text-xs text-gray-500"><%= article.sku %> | <%= article.barcode %></p>
-                    </div>
-                    <%= form_with url: add_stock_location_path(@location), method: :post, class: "flex items-center gap-2" do |f| %>
-                      <%= f.hidden_field :article_id, value: article.id %>
-                      <%= f.number_field :quantity, value: 1, min: 1, class: "w-20 rounded border-gray-300 text-sm p-1", autofocus: (index == 0), onfocus: "this.select()" %>
-                      <%= f.submit "Add", class: "bg-[#FFD100] text-[#2C2C2C] px-3 py-1 rounded text-sm font-bold hover:bg-yellow-400 cursor-pointer" %>
-                    <% end %>
-                  </div>
-                </li>
+                <% if article.variants.any? %>
+                   <% article.variants.each do |variant| %>
+                      <li class="p-3 hover:bg-gray-50 pl-8 bg-gray-50">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <div>
+                            <p class="font-bold text-sm"><%= article.name %> - <%= variant.name %></p>
+                            <p class="text-xs text-gray-500"><%= variant.barcode %> | <%= number_to_currency(variant.price) %></p>
+                          </div>
+                          <%= form_with url: add_stock_location_path(@location), method: :post, class: "flex items-center gap-2" do |f| %>
+                            <%= f.hidden_field :article_id, value: article.id %>
+                            <%= f.hidden_field :variant_id, value: variant.id %>
+                            <%= f.number_field :quantity, value: 1, min: 1, class: "w-20 rounded border-gray-300 text-sm p-1" %>
+                            <%= f.submit "Add", class: "bg-[#FFD100] text-[#2C2C2C] px-3 py-1 rounded text-sm font-bold hover:bg-yellow-400 cursor-pointer" %>
+                          <% end %>
+                        </div>
+                      </li>
+                   <% end %>
+                <% else %>
+                    <li class="p-3 hover:bg-gray-50">
+                      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                          <p class="font-bold text-sm"><%= article.name %></p>
+                          <p class="text-xs text-gray-500"><%= article.sku %> | <%= article.barcode %></p>
+                        </div>
+                        <%= form_with url: add_stock_location_path(@location), method: :post, class: "flex items-center gap-2" do |f| %>
+                          <%= f.hidden_field :article_id, value: article.id %>
+                          <%= f.number_field :quantity, value: 1, min: 1, class: "w-20 rounded border-gray-300 text-sm p-1", autofocus: (index == 0), onfocus: "this.select()" %>
+                          <%= f.submit "Add", class: "bg-[#FFD100] text-[#2C2C2C] px-3 py-1 rounded text-sm font-bold hover:bg-yellow-400 cursor-pointer" %>
+                        <% end %>
+                      </div>
+                    </li>
+                <% end %>
               <% end %>
             </ul>
           </div>
@@ -68,8 +87,16 @@
               <% @stocks.each do |stock| %>
                 <tr>
                   <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm font-medium text-gray-900"><%= stock.article.name %></div>
-                    <div class="text-xs text-gray-500"><%= stock.article.sku %></div>
+                    <div class="text-sm font-medium text-gray-900">
+                      <% if stock.variant %>
+                         <%= stock.article.name %> - <span class="text-gray-600 italic"><%= stock.variant.name %></span>
+                      <% else %>
+                         <%= stock.article.name %>
+                      <% end %>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        <%= stock.variant ? stock.variant.barcode : stock.article.sku %>
+                    </div>
                   </td>
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 font-bold">
                     <%= stock.quantity %>

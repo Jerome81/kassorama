@@ -1,0 +1,2 @@
+class RevolutTransaction < ApplicationRecord
+end

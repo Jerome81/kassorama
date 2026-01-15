@@ -1,0 +1,102 @@
+<% 
+  # Locals:
+  # - article
+  # - sorted_locations
+  # - primary_location
+  # - recent_sales (map)
+  # - recent_variant_sales (map)
+  # - other_locations
+  # - selected_supplier_id
+%>
+<% 
+   # Sales for Article (Article-level sales, usually legacy or free price items)
+   sales_30d = recent_sales[article.id] || 0
+%>
+<tr class="hover:bg-gray-50 transition border-b border-gray-100">
+  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-200 hover:bg-gray-50">
+    <%= link_to article.name, edit_article_path(article, return_to: request.original_url), class: "hover:text-[#FFD100] transition-colors" %>
+    <div class="text-xs text-gray-400 font-normal"><%= article.sku %></div>
+  </td>
+  <% sorted_locations.each do |location| %>
+    <% 
+       # Show only base stock (no variant) for the main row
+       stock = article.stocks.find { |s| s.location_id == location.id && s.variant_id.nil? }
+       qty = stock&.quantity || 0
+    %>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-right <%= 'bg-yellow-50/50 font-bold border-x border-yellow-100' if primary_location && location.id == primary_location.id %>">
+       <span class="<%= 'text-red-500' if qty <= 0 %>">
+         <%= qty %>
+       </span>
+    </td>
+  <% end %>
+  <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono border-l border-gray-200">
+      <%= sales_30d > 0 ? sales_30d : "-" %>
+  </td>
+  <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono border-l border-gray-200">
+      <% 
+         # Only show transfer form if there is stock to move (or generic check)
+         # Using aggregated check from controller isn't available here easily per row, 
+         # but we can show form if there is non-variant stock in other locations.
+         has_stock_in_others = other_locations.any? { |loc| (article.stocks.find { |s| s.location_id == loc.id && s.variant_id.nil? }&.quantity || 0) > 0 }
+      %>
+      <% if has_stock_in_others %>
+          <%= form_with url: stock_transfers_path, method: :post, class: "flex items-center space-x-2 justify-end" do |f| %>
+            <%= f.hidden_field :article_id, value: article.id %>
+            <%= f.hidden_field :supplier_id, value: selected_supplier_id %>
+            
+            <%= f.number_field :quantity, placeholder: "Menge", class: "w-20 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]", min: 1 %>
+            
+            <%= f.collection_select :source_location_id, other_locations, :id, :name, {}, class: "w-32 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]" %>
+            
+            <%= f.submit "Verschieben", class: "px-3 py-1 bg-[#FFD100] text-[#2C2C2C] text-xs font-bold rounded hover:bg-[#ffe066] cursor-pointer" %>
+          <% end %>
+      <% end %>
+  </td>
+</tr>
+
+<!-- Variants Rows -->
+<% if article.variants.any? %>
+   <% article.variants.each do |variant| %>
+      <% variant_sales = recent_variant_sales[variant.id] || 0 %>
+      <tr class="hover:bg-gray-50 transition border-b border-gray-100 bg-gray-50/30">
+          <td class="px-6 py-2 whitespace-nowrap text-sm text-gray-600 pl-12 sticky left-0 bg-gray-50/30 z-10 border-r border-gray-200">
+            <div class="flex items-center">
+              <span class="text-gray-400 mr-2">↳</span> <%= variant.name %>
+            </div>
+            <div class="text-[10px] text-gray-400 font-normal pl-4"><%= variant.barcode %></div>
+          </td>
+          <% sorted_locations.each do |location| %>
+            <% 
+               v_stock = variant.stocks.find { |s| s.location_id == location.id }
+               v_qty = v_stock&.quantity || 0
+            %>
+            <td class="px-6 py-2 whitespace-nowrap text-sm text-right <%= 'bg-yellow-50/50 font-bold border-x border-yellow-100' if primary_location && location.id == primary_location.id %>">
+               <span class="<%= 'text-red-500' if v_qty <= 0 %>">
+                 <%= v_qty %>
+               </span>
+            </td>
+          <% end %>
+          <td class="px-6 py-2 whitespace-nowrap text-sm text-right text-gray-500 font-mono border-l border-gray-200">
+              <%= variant_sales > 0 ? variant_sales : "-" %>
+          </td>
+          <td class="px-6 py-2 whitespace-nowrap text-sm text-right text-gray-500 font-mono border-l border-gray-200">
+              <% 
+                 v_has_stock_in_others = other_locations.any? { |loc| (variant.stocks.find { |s| s.location_id == loc.id }&.quantity || 0) > 0 }
+              %>
+              <% if v_has_stock_in_others %>
+                  <%= form_with url: stock_transfers_path, method: :post, class: "flex items-center space-x-2 justify-end" do |f| %>
+                    <%= f.hidden_field :article_id, value: article.id %>
+                    <%= f.hidden_field :variant_id, value: variant.id %>
+                    <%= f.hidden_field :supplier_id, value: selected_supplier_id %>
+                    
+                    <%= f.number_field :quantity, placeholder: "Menge", class: "w-20 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]", min: 1 %>
+                    
+                    <%= f.collection_select :source_location_id, other_locations, :id, :name, {}, class: "w-32 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]" %>
+                    
+                    <%= f.submit "Verschieben", class: "px-3 py-1 bg-[#FFD100] text-[#2C2C2C] text-xs font-bold rounded hover:bg-[#ffe066] cursor-pointer" %>
+                  <% end %>
+              <% end %>
+          </td>
+      </tr>
+   <% end %>
+<% end %>

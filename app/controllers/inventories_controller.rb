@@ -8,10 +8,10 @@ class InventoriesController < ApplicationController
 
   # GET /inventories/1 or /inventories/1.json
   def show
-    @active_articles = Article.where(status: 'active').order(:group, :name)
+    @active_articles = Article.where(status: 'active').includes(:variants).order(:name)
     @locations = Location.all.order(:name)
-    # Pre-fetch existing lines for efficient access: { [article_id, location_id] => line }
-    @inventory_lines = @inventory.inventory_lines.index_by { |line| [line.article_id, line.location_id] }
+    # Pre-fetch existing lines for efficient access: { [article_id, variant_id, location_id] => line }
+    @inventory_lines = @inventory.inventory_lines.index_by { |line| [line.article_id, line.variant_id, line.location_id] }
   end
 
   def update_line
@@ -23,10 +23,18 @@ class InventoriesController < ApplicationController
     # @inventory is set by before_action
     article = Article.find(params[:article_id])
     location = Location.find(params[:location_id])
+    variant_id = params[:variant_id]
     quantity = params[:quantity].to_i
     
-    @line = @inventory.inventory_lines.find_or_initialize_by(article: article, location: location)
-    
+    if variant_id.present?
+       variant = Variant.find(variant_id)
+       @line = @inventory.inventory_lines.find_or_initialize_by(article: article, variant: variant, location: location)
+       stock = Stock.find_or_initialize_by(article: article, variant: variant, location: location)
+    else
+       @line = @inventory.inventory_lines.find_or_initialize_by(article: article, variant: nil, location: location)
+       stock = Stock.find_or_initialize_by(article: article, variant: nil, location: location)
+    end
+
     # Calculate diff: accumulates the change from the original snapshot
     old_quantity = @line.quantity || 0
     delta = quantity - old_quantity
@@ -34,16 +42,13 @@ class InventoriesController < ApplicationController
     @line.quantity = quantity
     @line.diff = (@line.diff || 0) + delta
     
-    if @line.save
-      # Also update the actual Stock record
-      stock = Stock.find_or_initialize_by(article: article, location: location)
-      stock.quantity = quantity
-      stock.save!
-      
-      render json: { diff: @line.diff }, status: :ok
-    else
-      head :unprocessable_entity
-    end
+    @line.save!
+    
+    # Also update the actual Stock record
+    stock.quantity = quantity
+    stock.save!
+    
+    render json: { diff: @line.diff }, status: :ok
   end
 
   def complete
@@ -63,7 +68,7 @@ class InventoriesController < ApplicationController
     pdf.text "Generated on: #{Time.current.strftime('%d.%m.%Y %H:%M')}", size: 10
     pdf.move_down 20
 
-    active_articles = Article.where(status: 'active').order(:group, :name)
+    active_articles = Article.where(status: 'active').order(:name)
     inventory_lines = @inventory.inventory_lines.group_by(&:article_id)
 
     table_data = [["Article", "Quantity", "Cost", "Total Value"]]
@@ -78,7 +83,7 @@ class InventoriesController < ApplicationController
       grand_total += total_value
 
       table_data << [
-        "#{article.group.present? ? "[#{article.group}] " : ""}#{article.name}",
+        article.name,
         total_quantity.to_s,
         helpers.number_to_currency(cost, unit: ''),
         helpers.number_to_currency(total_value, unit: '')
@@ -114,6 +119,19 @@ class InventoriesController < ApplicationController
 
     respond_to do |format|
       if @inventory.save
+        # Populate inventory with current stock
+        Stock.find_each do |stock|
+          next if stock.quantity.nil? || stock.quantity == 0 
+          
+          @inventory.inventory_lines.create!(
+            article_id: stock.article_id,
+            location_id: stock.location_id,
+            variant_id: stock.variant_id,
+            quantity: stock.quantity,
+            diff: 0
+          )
+        end
+
         format.html { redirect_to @inventory, notice: "Inventory was successfully created." }
         format.json { render :show, status: :created, location: @inventory }
       else

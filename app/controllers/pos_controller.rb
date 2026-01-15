@@ -1,6 +1,6 @@
 class PosController < ApplicationController
-  before_action :set_register, only: [:show, :add_item, :checkout, :update_item_quantity, :remove_item, :payment, :process_payment, :add_free_price_item, :save_free_price_item, :withdraw_cash, :process_withdrawal, :park_order, :restore_order, :update_item_discount]
-  before_action :set_current_order, only: [:show, :add_item, :checkout, :update_item_quantity, :remove_item, :payment, :process_payment, :save_free_price_item, :park_order, :restore_order, :update_item_discount]
+  before_action :set_register, only: [:show, :add_item, :add_variant_item, :checkout, :update_item_quantity, :remove_item, :payment, :process_payment, :add_free_price_item, :save_free_price_item, :withdraw_cash, :process_withdrawal, :park_order, :restore_order, :update_item_discount]
+  before_action :set_current_order, only: [:show, :add_item, :add_variant_item, :checkout, :update_item_quantity, :remove_item, :payment, :process_payment, :save_free_price_item, :park_order, :restore_order, :update_item_discount]
 
   def index
     @cash_registers = CashRegister.all
@@ -24,46 +24,56 @@ class PosController < ApplicationController
       articles = Article.where(status: 'active').where(barcode: params[:search_query])
       articles = Article.where(status: 'active').where(sku: params[:search_query]) if articles.empty?
       articles = Article.where(status: 'active').where("name LIKE ?", "%#{params[:search_query]}%") if articles.empty?
-      articles = Article.where(status: 'active').where("\"group\" LIKE ?", "%#{params[:search_query]}%") if articles.empty?
       
-      @articles = articles.order(:group, :name)
+      @articles = articles.order(:name)
       flash.now[:notice] = "Found #{@articles.count} results for '#{params[:search_query]}'" if @articles.any?
     elsif @active_section
-      # Fetch articles manually assigned to the section OR matching the group filter
-
-      
-      # We want active articles that are EITHER in the manual list OR match the group
+      # Fetch articles manually assigned to the section
       @articles = Article.where(status: 'active')
                          .left_joins(:article_sections)
-                         .where("\"articles\".\"group\" = ? OR article_sections.section_id = ?", @active_section.group_filter, @active_section.id)
+                         .where("article_sections.section_id = ?", @active_section.id)
                          .distinct
-                         .order(:group, :name)
+                         .order(:name)
     else
-      @articles = Article.where(status: 'active').order(:group, :name)
+      @articles = Article.where(status: 'active').order(:name)
     end
   end
 
   def add_item
     query = params[:query]
     
+    # Check if there is a variant match mainly for barcode
+    variant = Variant.find_by(barcode: query)
+    if variant
+      add_variant_logic(variant)
+      return
+    end
+
     # Prioritized Search:
     # 1. Barcode (exact)
     # 2. SKU (exact)
     # 3. Name (partial)
-    # 4. Group (partial)
     
     articles = Article.where(status: 'active').where(barcode: query)
     articles = Article.where(status: 'active').where(sku: query) if articles.empty?
     articles = Article.where(status: 'active').where("name LIKE ?", "%#{query}%") if articles.empty?
-    articles = Article.where(status: 'active').where("\"group\" LIKE ?", "%#{query}%") if articles.empty?
     
     if articles.count == 1
       article = articles.first
       
+      # Check for variants
+      if article.variants.any?
+        respond_to do |format|
+          format.turbo_stream { render turbo_stream: turbo_stream.append("modal-container", partial: "pos/variant_selection_modal", locals: { article: article }) }
+          format.html { redirect_to pos_path(@cash_register), alert: "Please select a variant." }
+        end
+        return
+      end
+
       if article.price_type == 'free'
         redirect_to add_free_price_item_pos_path(@cash_register, article_id: article.id, section_id: params[:section_id])
       else
-        @item = @order.order_items.find_or_initialize_by(article: article)
+        @item = @order.order_items.find_or_initialize_by(article: article, variant: nil)
         @item.quantity = (@item.quantity || 0) + 1
         @item.unit_price = article.price
         @item.gross_price = @item.quantity * @item.unit_price
@@ -82,6 +92,12 @@ class PosController < ApplicationController
     end
   end
 
+  def add_variant_item
+    variant = Variant.find(params[:variant_id])
+    add_variant_logic(variant)
+  end
+
+
   def update_item_quantity
     @item = @order.order_items.find(params[:item_id])
     change = params[:change].to_i
@@ -97,12 +113,22 @@ class PosController < ApplicationController
       @item.destroy
     end
     
+    # If order is empty, clear the name
+    if @order.order_items.empty?
+      @order.update(name: nil)
+    end
+    
     redirect_to pos_path(@cash_register, section_id: params[:section_id])
   end
 
   def remove_item
     @item = @order.order_items.find(params[:item_id])
     @item.destroy
+    
+    if @order.order_items.empty?
+      @order.update(name: nil)
+    end
+    
     redirect_to pos_path(@cash_register, section_id: params[:section_id]), notice: "Removed #{@item.article.name}"
   end
 
@@ -176,86 +202,92 @@ class PosController < ApplicationController
     end
 
     success = false
-    ActiveRecord::Base.transaction do
-      effective_voucher_amount = 0.0
-      voucher_ratio = 0.0
-      
-      if final_total > 0
-        effective_voucher_amount = [voucher_amount, final_total].min
-        voucher_ratio = effective_voucher_amount / final_total
-      end
+    begin
+      ActiveRecord::Base.transaction do
+        effective_voucher_amount = 0.0
+        voucher_ratio = 0.0
+        
+        if final_total > 0
+          effective_voucher_amount = [voucher_amount, final_total].min
+          voucher_ratio = effective_voucher_amount / final_total
+        end
 
-      # Track accumulated voucher amount to fix rounding on the last item
-      accumulated_voucher_amount = 0.0
-      order_items_array = @order.order_items.includes(:article).to_a
-      
-      order_items_array.each_with_index do |item, index|
-        unless item.article.price_type == 'free'
-          stock = Stock.find_or_initialize_by(article: item.article, location: stock_location)
-          # We allow negative stock (tracking over-sells/discrepancies)
-          stock.quantity = (stock.quantity || 0) - item.quantity
-          stock.save!
-        end
-        item.article.increment!(:sales_count, item.quantity)
+        # Track accumulated voucher amount to fix rounding on the last item
+        accumulated_voucher_amount = 0.0
+        order_items_array = @order.order_items.includes(:article).to_a
+        
+        order_items_array.each_with_index do |item, index|
+          unless item.article.price_type == 'free'
+            stock = Stock.find_or_initialize_by(article: item.article, variant: item.variant, location: stock_location)
+            # We allow negative stock (tracking over-sells/discrepancies)
+            stock.quantity = (stock.quantity || 0) - item.quantity
+            stock.save!
+          end
+          item.article.increment!(:sales_count, item.quantity)
 
-        # Calculate Split
-        if index == order_items_array.size - 1
-           # Last item takes the difference/remainder to ensure total matches effective_voucher_amount
-           amount_voucher = (effective_voucher_amount - accumulated_voucher_amount).round(2)
-        else
-           amount_voucher = (item.net_price * voucher_ratio).round(2)
+          # Calculate Split
+          if index == order_items_array.size - 1
+             # Last item takes the difference/remainder to ensure total matches effective_voucher_amount
+             amount_voucher = (effective_voucher_amount - accumulated_voucher_amount).round(2)
+          else
+             amount_voucher = (item.net_price * voucher_ratio).round(2)
+          end
+          
+          accumulated_voucher_amount += amount_voucher
+          amount_remaining = item.net_price - amount_voucher
+          
+          # Voucher Entry (2215)
+          if amount_voucher != 0
+            Entry.create!(
+               booking_date: Date.current,
+               debit_account: '2215',
+               credit_account: item.article.booking_account,
+               tax_code: item.article.tax_code&.rate&.to_s,
+               amount: amount_voucher,
+               reference_number: "#{@order.id}/#{item.article.name}",
+               description: "POS Sale"
+            )
+          end
+          
+          # Remaining Payment Entry
+          if amount_remaining != 0
+            Entry.create!(
+               booking_date: Date.current,
+               debit_account: (payment_method == 'cash' ? '1000' : '1030'),
+               credit_account: item.article.booking_account,
+               tax_code: item.article.tax_code&.rate&.to_s,
+               amount: amount_remaining,
+               reference_number: "#{@order.id}/#{item.article.name}",
+               description: "POS Sale"
+            )
+          end
         end
-        
-        accumulated_voucher_amount += amount_voucher
-        amount_remaining = item.net_price - amount_voucher
-        
-        # Voucher Entry (2215)
-        if amount_voucher != 0
-          Entry.create!(
-             booking_date: Date.current,
-             debit_account: '2215',
-             credit_account: item.article.booking_account,
-             tax_code: item.article.tax_code&.rate&.to_s,
-             amount: amount_voucher,
-             reference_number: "#{@order.id}/#{item.article.name}",
-             description: "POS Sale"
-          )
-        end
-        
-        # Remaining Payment Entry
-        if amount_remaining != 0
-          Entry.create!(
-             booking_date: Date.current,
-             debit_account: (payment_method == 'cash' ? '1000' : '1030'),
-             credit_account: item.article.booking_account,
-             tax_code: item.article.tax_code&.rate&.to_s,
-             amount: amount_remaining,
-             reference_number: "#{@order.id}/#{item.article.name}",
-             description: "POS Sale"
-          )
-        end
-      end
 
-      @order.update!(
-        status: :completed, 
-        total_amount: final_total,
-        discount: discount_amount,
-        voucher: voucher_info,
-        payment_method: payment_method,
-        user_name: current_user.name
-      )
-      
-      # Update Cash Register Amount if Cash Payment
-      if payment_method == 'cash'
-        # Only add the amount actually paid in cash (Total - Voucher)
-        cash_paid = [final_total - voucher_amount, 0].max
+        @order.update!(
+          status: :completed, 
+          total_amount: final_total,
+          discount: discount_amount,
+          voucher: voucher_info,
+          payment_method: payment_method,
+          user_name: current_user.name
+        )
         
-        @cash_register.lock! # Prevent race conditions
-        @cash_register.amount = (@cash_register.amount || 0) + cash_paid
-        @cash_register.save!
+        # Update Cash Register Amount if Cash Payment
+        if payment_method == 'cash'
+          # Only add the amount actually paid in cash (Total - Voucher)
+          cash_paid = [final_total - voucher_amount, 0].max
+          
+          @cash_register.lock! # Prevent race conditions
+          @cash_register.amount = (@cash_register.amount || 0) + cash_paid
+          @cash_register.save!
+        end
+        
+        success = true
       end
-      
-      success = true
+    rescue StandardError => e
+      @error_message = "#{e.message}"
+      Rails.logger.error("Checkout Error: #{e.message}\n#{e.backtrace.join("\n")}")
+      success = false
     end
     
     if success
@@ -310,6 +342,48 @@ class PosController < ApplicationController
 
     if amount <= 0
       redirect_to withdraw_cash_pos_path(@cash_register), alert: "Please enter a valid amount greater than 0."
+      return
+    end
+
+    # Handle Transfer to another register
+    if params[:target_register_id].present?
+      target_register = CashRegister.find(params[:target_register_id])
+      
+      if amount > (@cash_register.amount || 0)
+        redirect_to withdraw_cash_pos_path(@cash_register), alert: "Cannot transfer more than current balance."
+        return
+      end
+      
+      ActiveRecord::Base.transaction do
+        @cash_register.lock!
+        target_register.lock!
+        
+        @cash_register.amount = (@cash_register.amount || 0) - amount
+        target_register.amount = (target_register.amount || 0) + amount
+        
+        @cash_register.save!
+        target_register.save!
+        
+        # Log removal from source
+        Transaction.create!(
+          cash_register: @cash_register,
+          transaction_type: 'transfer to',
+          amount: amount,
+          description: "Transfer to #{target_register.name}",
+          user_name: current_user.name
+        )
+        
+        # Log addition to target
+        Transaction.create!(
+          cash_register: target_register,
+          transaction_type: 'transfer from',
+          amount: amount,
+          description: "Transfer from #{@cash_register.name}",
+          user_name: current_user.name
+        )
+      end
+      
+      redirect_to pos_path(@cash_register), notice: "Successfully transferred #{helpers.number_to_currency(amount)} to #{target_register.name}."
       return
     end
     
@@ -431,6 +505,21 @@ class PosController < ApplicationController
   end
 
   private
+  
+    def add_variant_logic(variant)
+      @item = @order.order_items.find_or_initialize_by(article_id: variant.article_id, variant_id: variant.id)
+      @item.quantity = (@item.quantity || 0) + 1
+      # Use variant price/name (name is virtual on OrderItem usually, but we store article_id)
+      # Price comes from variant
+      @item.unit_price = variant.price
+      @item.gross_price = @item.quantity * @item.unit_price
+      @item.discount = 0
+      @item.net_price = @item.gross_price
+      @item.save!
+      flash[:notice] = "Added #{variant.name}"
+      redirect_to pos_path(@cash_register, section_id: params[:section_id])
+    end
+
     def set_register
       @cash_register = CashRegister.find(params[:id])
     end

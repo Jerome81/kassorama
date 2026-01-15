@@ -104,7 +104,7 @@ class AccountingController < ApplicationController
             ))
           when :poker
             Entry.create!(entry_params.merge(
-              tax_code: "0.0",
+              tax_code: "8.1",
               credit_account: "3415",
               description: "Poker buy in #{date.strftime('%d.%m.%Y')} #{payment_suffix}"
             ))
@@ -206,99 +206,10 @@ class AccountingController < ApplicationController
     @client_id = Setting[:bexio_client_id]
     @client_secret = Setting[:bexio_client_secret]
     @bexio_accounts = BexioAccount.order(:account_number)
+    @bexio_tax_codes = BexioTaxCode.order(:name)
   end
 
-  def update_settings
-    Setting[:bexio_client_id] = params[:client_id]
-    Setting[:bexio_client_secret] = params[:client_secret]
-    redirect_to accounting_settings_path, notice: "Settings saved."
-  end
-
-  def bexio_auth
-    service = BexioService.new
-    if service.configured?
-      redirect_to service.authorize_url, allow_other_host: true
-    else
-      redirect_to accounting_settings_path, alert: "Please configure Client ID and Secret first."
-    end
-  end
-
-  def bexio_callback
-    code = params[:code]
-    service = BexioService.new
-    
-    if service.exchange_token(code)
-      redirect_to accounting_settings_path, notice: "Successfully connected to Bexio!"
-    else
-      redirect_to accounting_settings_path, alert: "Failed to connect to Bexio."
-    end
-  rescue => e
-    redirect_to accounting_settings_path, alert: "Error: #{e.message}"
-  end
-
-  def export_bexio
-    entries = Entry.where(exported_at: nil)
-    
-    if params[:date].present?
-       entries = entries.where(booking_date: params[:date])
-    end
-    
-    if entries.empty?
-      redirect_to entries_path, alert: "No entries to export for selected date."
-      return
-    end
-
-    service = BexioService.new
-    
-    success_count = 0
-    error_count = 0
-    
-    # Group by Date and Reference to keep context, or just Daily Summary?
-    # User Request: "summarize the entries and send them to bexio"
-    # To keep it manageable, let's group by Date.
-    
-    entries_by_date = entries.group_by(&:booking_date)
-    
-    collected_errors = []
-    
-    entries_by_date.each do |date, daily_entries|
-       # We will create ONE manual entry per Day containing all lines.
-       lines = []
-       
-       # Aggregate by Debit, Credit, and Tax Code
-       daily_agg = daily_entries.group_by { |e| [e.debit_account, e.credit_account, e.tax_code] }
-       
-       daily_agg.each do |(debit, credit, tax), group|
-         sum = group.sum(&:amount)
-         lines << {
-           description: "Tagesumsatz #{date.strftime('%d.%m.%Y')}",
-           amount: sum, # Summarized Amount
-           debit_account: debit,
-           credit_account: credit,
-           tax_code: tax
-         }
-       end
-       
-       begin
-         service.send_manual_entry(date, "Tagesumsatz #{date.strftime('%d.%m.%Y')}", lines)
-         # Mark as exported
-         Entry.where(id: daily_entries.map(&:id)).update_all(exported_at: Time.current)
-         success_count += 1
-       rescue => e
-         error_msg = "#{date.strftime('%d.%m.%Y')}: #{e.message}"
-         Rails.logger.error "Bexio Export Error: #{error_msg}"
-         collected_errors << error_msg
-         error_count += 1
-       end
-    end
-
-    if error_count == 0
-      redirect_to entries_path, notice: "Successfully exported #{success_count} journal entries to Bexio."
-    else
-      redirect_to entries_path, alert: "Exported #{success_count} entries. Failed: #{collected_errors.join(', ')}"
-    end
-  end
-
+  # ... existing methods ...
 
   def import_accounts
     service = BexioService.new
@@ -321,6 +232,29 @@ class AccountingController < ApplicationController
     end
     
     redirect_to accounting_settings_path, notice: "Successfully imported #{count} accounts from Bexio."
+  rescue => e
+    redirect_to accounting_settings_path, alert: "Import failed: #{e.message}"
+  end
+
+  def import_tax_codes
+    service = BexioService.new
+    taxes = service.fetch_taxes
+    
+    count = 0
+    ActiveRecord::Base.transaction do
+      BexioTaxCode.delete_all
+      taxes.each do |tax|
+        next unless tax['id'] && tax['code']
+        
+        BexioTaxCode.create!(
+          bexio_id: tax['id'].to_s,
+          name: tax['code']
+        )
+        count += 1
+      end
+    end
+    
+    redirect_to accounting_settings_path, notice: "Successfully imported #{count} tax codes from Bexio."
   rescue => e
     redirect_to accounting_settings_path, alert: "Import failed: #{e.message}"
   end

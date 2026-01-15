@@ -16,7 +16,6 @@
           <th scope="col" class="px-6 py-3">SKU</th>
           <th scope="col" class="px-6 py-3">Barcode</th>
           <th scope="col" class="px-6 py-3">Price</th>
-          <th scope="col" class="px-6 py-3">Group</th>
           <th scope="col" class="px-6 py-3">MWST</th>
           <th scope="col" class="px-6 py-3">Status</th>
           <th scope="col" class="px-6 py-3 text-right">Actions</th>
@@ -26,7 +25,7 @@
         <% @articles.each do |article| %>
           <tr class="bg-white border-b hover:bg-gray-50">
             <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-              <span class="text-gray-500 font-normal mr-1"><%= article.group %></span> <%= article.name %>
+              <%= article.name %>
             </td>
             <td class="px-6 py-4">
               <%= article.sku %>
@@ -36,9 +35,6 @@
             </td>
             <td class="px-6 py-4">
               <%= number_to_currency(article.price) %>
-            </td>
-            <td class="px-6 py-4">
-              <%= article.group %>
             </td>
             <td class="px-6 py-4">
               <%= article.tax_code&.rate %>%

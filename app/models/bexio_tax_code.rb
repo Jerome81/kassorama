@@ -1,0 +1,2 @@
+class BexioTaxCode < ApplicationRecord
+end

@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  get 'revolut_transactions/index'
   get 'login', to: 'sessions#new'
   post 'login', to: 'sessions#create'
   delete 'logout', to: 'sessions#destroy'
@@ -13,9 +14,16 @@ Rails.application.routes.draw do
   get 'accounting/bexio_auth', to: 'accounting#bexio_auth'
   get 'accounting/bexio_callback', to: 'accounting#bexio_callback'
   post 'accounting/import_accounts', to: 'accounting#import_accounts'
+  post 'accounting/import_tax_codes', to: 'accounting#import_tax_codes'
   post 'accounting/export_bexio', to: 'accounting#export_bexio'
   post 'accounting/create_booking', to: 'accounting#create_booking'
   post 'accounting/create_transaction_booking', to: 'accounting#create_transaction_booking'
+  resources :revolut_transactions, only: [:index, :update] do
+    collection do
+      post :import
+      post :export
+    end
+  end
   resources :stock_transfers, only: [:index, :create]
   resources :stock_orders, only: [:index]
   resources :inventories do
@@ -50,6 +58,7 @@ Rails.application.routes.draw do
   resources :pos, controller: 'pos', only: [:index, :show], as: 'pos' do
     member do
       post :add_item
+      post :add_variant_item
       patch :update_item_quantity
       delete :remove_item
       post :checkout

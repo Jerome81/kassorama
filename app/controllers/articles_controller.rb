@@ -2,7 +2,7 @@ class ArticlesController < ApplicationController
   before_action :set_article, only: %i[ show edit update destroy ]
 
   def index
-    @articles = Article.all.order(:group, :name)
+    @articles = Article.all.order(:name)
   end
 
   def show
@@ -46,6 +46,6 @@ class ArticlesController < ApplicationController
     end
 
     def article_params
-      params.require(:article).permit(:name, :sku, :barcode, :price, :cost, :tax_code_id, :group, :picture, :status, :price_type, :is_voucher, :article_category_id, :supplier_id, :booking_account)
+      params.require(:article).permit(:name, :sku, :barcode, :price, :cost, :tax_code_id, :picture, :status, :price_type, :is_voucher, :article_category_id, :supplier_id, :booking_account, :image, variants_attributes: [:id, :name, :barcode, :price, :picture, :image, :_destroy])
     end
 end

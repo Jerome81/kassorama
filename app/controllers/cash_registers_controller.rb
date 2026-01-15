@@ -62,32 +62,8 @@ class CashRegistersController < ApplicationController
     @cash_register = CashRegister.find(params[:id])
     
     orders = @cash_register.orders.where(status: 'completed')
-    manual_transactions = Transaction.all # Assuming Transaction is global or we need to add cash_register_id to Transaction? 
-    # Wait, Transaction model created earlier didn't have cash_register_id!
-    # "create_table :transactions do |t| t.string :transaction_type; t.decimal :amount... end"
-    # It seems we missed linking Transaction to CashRegister. 
-    # Current user requirement implies they want to see it here.
-    # I should probably fix the model to belong to cash register, but strict prompt says "show the transactions".
-    # Based on previous context, user is working on THIS cash register.
-    # If there are multiple registers, we have a bug: transactions are not scoped.
-    # However, I cannot easily change schema right now without distinct instruction or assuming I can fix it.
-    # Given the flow "Bargeld entnehmen" was called on a specific register, it logically belongs to it.
-    # I will assume for now we just show ALL transactions (if single store) OR I should have added a relation.
-    # Let's check if I can filter by Created At vs Order Created At.
-    
-    # RE-READING: "create a transaction of type 'removal'..."
-    # I did `Transaction.create!(...)` in `process_withdrawal`. It did NOT save cash_register_id.
-    # This is a schema deficiency. 
-    # OPTION 1: Add cash_register_id to Transaction now (cleanest).
-    # OPTION 2: Show all transactions (messy if multiple registers).
-    # Given the user has "Cash Registers" (plural) resource, Option 1 is required for correctness.
-    # I will perform a migration to add cash_register_id to transactions first? 
-    # No, I am in the middle of editing the controller. I can't do that inside `replace_file_content`.
-    # I will write the code assuming I will fix the schema immediately after.
-    # OR, I just fetch all Transaction.order(created_at: :desc) and warn the user.
-    # Actually, let's check the previous `Transaction.create` calls. They didn't pass register ID.
-    # I will fetch ALL transactions for now alongside orders.
-    
+    manual_transactions = Transaction.where(cash_register_id: @cash_register.id) 
+
     # Combining list:
     timeline_items = []
     
@@ -95,7 +71,7 @@ class CashRegistersController < ApplicationController
       timeline_items << { type: 'order', object: o, timestamp: o.updated_at }
     end
     
-    Transaction.all.each do |t|
+    manual_transactions.each do |t|
       timeline_items << { type: 'transaction', object: t, timestamp: t.created_at }
     end
     
@@ -164,6 +140,6 @@ class CashRegistersController < ApplicationController
     end
 
     def cash_register_params
-      params.require(:cash_register).permit(:name, :status, :stock_location_id, :amount, :precreated_tabs, sections_attributes: [:id, :name, :group_filter, :_destroy])
+      params.require(:cash_register).permit(:name, :status, :stock_location_id, :amount, :precreated_tabs, sections_attributes: [:id, :name, :_destroy])
     end
 end

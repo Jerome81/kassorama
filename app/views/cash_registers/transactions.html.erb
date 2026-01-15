@@ -36,7 +36,16 @@
                       <% if type == 'order' %>
                          <span><%= obj.payment_method.present? ? obj.payment_method.titleize : '-' %></span>
                       <% else %>
-                         <span><%= obj.transaction_type == 'removal' ? 'Entnahme' : 'Kassensturz' %></span>
+                         <% 
+                            display_type = case obj.transaction_type
+                            when 'removal' then 'Entnahme'
+                            when 'reconciliation' then 'Kassensturz'
+                            when 'transfer to' then 'Transfer nach'
+                            when 'transfer from' then 'Transfer von'
+                            else obj.transaction_type.titleize
+                            end
+                         %>
+                         <span><%= display_type %></span>
                       <% end %>
                       <span class="text-xs text-gray-400"><%= row[:timestamp].strftime("%H:%M") %></span>
                     </div>
@@ -87,8 +96,10 @@
                            # Requirement: "amount into Netto".
                            # Typically removals are shown as negative flow? 
                            # But amount stored is positive. Let's just output the amount, possibly with sign if reconcil.
-                           if obj.transaction_type == 'removal'
+                           if ['removal', 'transfer to'].include?(obj.transaction_type)
                               display_amount = -obj.amount 
+                           elsif ['transfer from', 'addition'].include?(obj.transaction_type)
+                              display_amount = obj.amount
                            end
                         %>
                         <%= number_to_currency(display_amount, unit: "CHF", format: "%n %u") %>
