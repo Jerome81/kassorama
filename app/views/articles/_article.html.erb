@@ -94,6 +94,52 @@
               <p class="text-gray-400 italic text-sm">Kein Bestand an Lagerorten.</p>
            <% end %>
       </div>
+
+      <!-- Variants -->
+      <% if article.variants.any? %>
+        <div class="mt-8 border-t border-gray-100 pt-8">
+           <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Varianten</h3>
+           <div class="space-y-4">
+               <% article.variants.each do |variant| %>
+                 <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                           <div class="font-bold text-lg text-gray-900"><%= variant.name %></div>
+                           <div class="text-xs text-gray-500">Barcode: <%= variant.barcode.presence || '-' %> | SKU: <%= variant.sku.presence || '-' %></div>
+                           <div class="font-bold text-[#2C2C2C]"><%= number_to_currency(variant.price) %></div> 
+                        </div>
+                        <%= link_to "Bearbeiten", edit_variant_path(variant), class: "text-xs font-bold text-gray-400 hover:text-[#FFD100] border border-gray-200 px-2 py-1 rounded hover:border-[#FFD100]" %>
+                    </div>
+                    
+                    <% 
+                       v_sales_30d = variant.order_items.joins(:order).where(orders: { status: 'completed', updated_at: 30.days.ago..Time.current }).sum(:quantity) 
+                       v_stocks = variant.stocks.includes(:location)
+                    %>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-blue-50 p-3 rounded border border-blue-100">
+                            <span class="block text-[10px] text-blue-500 uppercase tracking-wider font-bold">Verkäufe (30d)</span>
+                            <span class="block text-xl font-bold text-blue-900"><%= v_sales_30d %> Stk</span>
+                        </div>
+                        
+                        <div class="space-y-2">
+                             <span class="block text-[10px] text-gray-500 uppercase tracking-wider font-bold">Bestand</span>
+                             <% if v_stocks.where('quantity != 0').any? %>
+                                <% v_stocks.where('quantity != 0').each do |st| %>
+                                   <div class="flex justify-between text-sm items-center bg-gray-50 p-2 rounded">
+                                      <span class="text-gray-600"><%= st.location.name %>:</span>
+                                      <span class="font-bold"><%= st.quantity %></span>
+                                   </div>
+                                <% end %>
+                             <% else %>
+                                <div class="text-sm text-gray-400 italic">Kein Bestand</div>
+                             <% end %>
+                        </div>
+                    </div>
+                 </div>
+               <% end %>
+           </div>
+        </div>
+      <% end %>
   <% end %>
 
   <% if action_name != "show" %>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_14_212704) do
+ActiveRecord::Schema[7.1].define(version: 2026_01_15_212859) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -50,6 +50,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_14_212704) do
     t.integer "section_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "sort_order"
     t.index ["article_id"], name: "index_article_sections_on_article_id"
     t.index ["section_id"], name: "index_article_sections_on_section_id"
   end
@@ -261,6 +262,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_14_212704) do
     t.string "picture"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "sku"
     t.index ["article_id"], name: "index_variants_on_article_id"
   end
 

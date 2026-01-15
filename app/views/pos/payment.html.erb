@@ -1,6 +1,58 @@
-<div class="mx-auto w-full max-w-4xl h-[calc(100vh-100px)] flex flex-col items-center justify-center p-6">
-  <div class="bg-white shadow-lg rounded-2xl w-full max-w-2xl p-8 border border-gray-100">
-    <h1 class="text-3xl font-bold text-[#2C2C2C] mb-8 text-center">Payment</h1>
+<div class="mx-auto w-full max-w-7xl h-[calc(100vh-100px)] flex gap-6 p-6">
+  <!-- Left Column: Order List -->
+  <div class="w-5/12 flex flex-col">
+     <div class="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100 flex-grow flex flex-col h-full">
+       <div class="bg-gray-50 border-b border-gray-200 px-6 py-4">
+          <h2 class="text-xl font-bold text-gray-800">Bestellübersicht</h2>
+          <% if @order.name.present? %>
+            <div class="text-sm text-yellow-600 font-bold mt-1"><%= @order.name %></div>
+          <% end %>
+       </div>
+       <div class="overflow-y-auto flex-grow">
+          <table class="min-w-full divide-y divide-gray-200">
+             <thead class="bg-gray-50 sticky top-0">
+               <tr>
+                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artikel</th>
+                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Menge</th>
+                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gesamt</th>
+               </tr>
+             </thead>
+             <tbody class="bg-white divide-y divide-gray-200">
+                <% @order_items.each do |item| %>
+                  <tr>
+                    <td class="px-6 py-4">
+                       <div class="text-sm font-medium text-gray-900"><%= item.article.name %></div>
+                       <% if item.variant %>
+                          <div class="text-xs text-gray-500"><%= item.variant.name %></div>
+                       <% end %>
+                    </td>
+                    <td class="px-6 py-4 text-right text-sm text-gray-500 font-medium whitespace-nowrap">
+                       <%= item.quantity %>
+                    </td>
+                    <td class="px-6 py-4 text-right text-sm font-bold text-gray-900 whitespace-nowrap">
+                       <% if item.discount.to_f > 0 %>
+                          <div class="text-xs text-gray-400 line-through"><%= number_to_currency((item.gross_price || (item.quantity * item.unit_price)), unit: '') %></div>
+                          <%= number_to_currency(item.net_price, unit: '') %>
+                       <% else %>
+                          <%= number_to_currency((item.gross_price || (item.quantity * item.unit_price)), unit: '') %>
+                       <% end %>
+                    </td>
+                  </tr>
+                <% end %>
+             </tbody>
+          </table>
+       </div>
+       <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between items-center">
+           <span class="font-bold text-gray-600">Total Items:</span>
+           <span class="font-bold text-gray-900"><%= @order_items.sum(&:quantity) %></span>
+       </div>
+     </div>
+  </div>
+
+  <!-- Right Column: Payment Controls -->
+  <div class="w-7/12 flex flex-col items-center justify-center">
+    <div class="bg-white shadow-lg rounded-2xl w-full max-w-2xl p-8 border border-gray-100">
+    <h1 class="text-3xl font-bold text-[#2C2C2C] mb-8 text-center">Bezahlung</h1>
 
     <div class="space-y-6">
       <!-- Total Display -->
@@ -10,18 +62,17 @@
       </div>
 
       <!-- Discount Section -->
-      <!-- Discount Section (Hidden if items already have individual discounts) -->
       <% unless @order.order_items.any? { |i| i.discount.to_f > 0 } %>
           <div class="bg-gray-50 p-3 rounded-lg flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <label class="font-medium text-gray-700">Discount</label>
+                <label class="font-medium text-gray-700">Rabatt</label>
                 <div class="w-32">
                      <input type="number" id="discount_value" placeholder="0" class="focus:ring-[#FFD100] focus:border-[#FFD100] block w-full text-lg border-gray-300 rounded-md p-2" value="0">
                 </div>
                 <div class="flex flex-col gap-1">
                      <label class="inline-flex items-center cursor-pointer">
                        <input type="radio" name="discount_type" value="fixed" checked class="form-radio text-[#FFD100] focus:ring-[#FFD100] h-4 w-4">
-                       <span class="ml-1 text-sm">Fixed</span>
+                       <span class="ml-1 text-sm">CHF</span>
                      </label>
                      <label class="inline-flex items-center cursor-pointer">
                        <input type="radio" name="discount_type" value="percent" class="form-radio text-[#FFD100] focus:ring-[#FFD100] h-4 w-4">
@@ -34,19 +85,18 @@
           </div>
       <% else %>
           <div class="bg-blue-50 p-3 rounded-lg text-center text-blue-600 text-sm mb-4">
-             Individual item discounts applied. Global discount disabled.
+             Artikelrabatte wurden angewendet. Globaler Rabatt deaktiviert.
           </div>
       <% end %>
           
 
-
        <!-- Backed Discount Code Scan -->
        <div class="text-right pt-2">
-        <a href="#" id="toggle_discount_code_btn" class="text-xs text-gray-500 hover:text-[#FFD100] transition" onclick="toggleDiscountCode(event)">+ Add discount code</a>
+        <a href="#" id="toggle_discount_code_btn" class="text-xs text-gray-500 hover:text-[#FFD100] transition" onclick="toggleDiscountCode(event)">+ Gutschein Code</a>
       </div>
       
       <div id="discount_code_section" class="bg-gray-50 p-4 rounded-lg hidden transition-all duration-300 mt-2">
-         <label class="block text-sm font-medium text-gray-700 mb-1">Voucher Amount</label>
+         <label class="block text-sm font-medium text-gray-700 mb-1">Gutschein Betrag</label>
          <div class="flex gap-2">
              <input type="number" id="voucher_input" placeholder="Amount..." class="focus:ring-[#FFD100] focus:border-[#FFD100] block w-full sm:text-sm border-gray-300 rounded-md p-2">
              <button type="button" onclick="redeemVoucher()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-gray-700 font-bold">Einlösen</button>
@@ -55,14 +105,45 @@
 
       <!-- Vouchers Display -->
       <div class="flex justify-between items-end pb-2 text-gray-500 hidden" id="vouchers_summary_row">
-        <span class="font-medium">Vouchers</span>
+        <span class="font-medium">Gutscheine</span>
         <span class="text-xl font-bold text-gray-800">- <span id="vouchers_display">0.00</span></span>
       </div>
 
 
-      <!-- Final Total -->
+
+      <!-- Trinkgeld Section -->
+      <% if @tip_article %>
+      <div class="bg-gray-50 p-4 rounded-lg mb-4 border border-gray-200">
+         <div class="flex items-center justify-between mb-2">
+             <h3 class="font-bold text-gray-700">Trinkgeld</h3>
+         </div>
+         <div class="flex gap-4 items-end">
+             <%= form_with url: save_free_price_item_pos_path(@cash_register), method: :post, id: "tip_form", class: "flex gap-2 items-end flex-grow" do |f| %>
+                 <%= hidden_field_tag :article_id, @tip_article.id %>
+                 <%= hidden_field_tag :return_to, 'payment' %>
+                 <%= hidden_field_tag :section_id, params[:section_id] if params[:section_id] %>
+                 
+                 <div class="w-1/3">
+                     <label class="block text-xs font-medium text-gray-500 mb-1">Betrag</label>
+                     <div class="relative">
+                        <input type="number" name="price" id="tip_amount" step="0.05" class="w-full border-gray-300 rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100]" placeholder="0.00">
+                        <span class="absolute right-8 top-2 text-gray-400 text-sm">CHF</span>
+                     </div>
+                 </div>
+                 
+                 <button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded border border-gray-300 h-[42px]">Hinzufügen</button>
+             <% end %>
+
+             <div class="w-1/2 border-l pl-4 border-gray-300">
+                 <label class="block text-xs font-medium text-gray-500 mb-1">Aufrunden auf (Total)</label>
+                 <input type="number" id="tip_target_total" step="0.05" class="w-full border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Total...">
+             </div>
+         </div>
+      </div>
+      <% end %>
+
       <div class="flex justify-between items-end border-t pt-4">
-        <span class="text-gray-900 font-bold text-2xl">To Pay</span>
+        <span class="text-gray-900 font-bold text-2xl">Total</span>
         <span class="text-5xl font-bold text-[#2C2C2C]" id="final_total_display"><%= number_to_currency(@total, unit: '') %></span>
       </div>
 
@@ -80,14 +161,14 @@
            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 cursor-pointer hover:bg-yellow-100 transition" onclick="selectPayment('cash')">
               <h3 class="font-bold text-lg text-yellow-900 mb-2 text-center">Barzahlung</h3>
               <div class="space-y-2">
-                 <label class="block text-xs font-medium text-yellow-800">Gegeben (Tendered)</label>
-                 <input type="number" id="amount_tendered_input" step="0.01" class="w-full border-yellow-300 rounded p-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white" placeholder="Amount given...">
+                 <label class="block text-xs font-medium text-yellow-800">Gegeben</label>
+                 <input type="number" id="amount_tendered_input" step="0.01" class="w-full border-yellow-300 rounded p-2 focus:ring-yellow-500 focus:border-yellow-500 bg-white" placeholder="Betrag...">
                  <div class="flex justify-between text-sm font-bold text-yellow-900 pt-1">
-                    <span>Change:</span>
+                    <span>Rückgeld:</span>
                     <span id="change_display">0.00</span>
                  </div>
               </div>
-              <button type="button" onclick="submitPayment('cash')" class="w-full mt-4 bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] font-bold py-3 rounded-lg shadow">Pay Cash</button>
+              <button type="button" onclick="submitPayment('cash')" class="w-full mt-4 bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] font-bold py-3 rounded-lg shadow">Bar bezahlen</button>
            </div>
 
            <!-- Kartenzahlung -->
@@ -100,19 +181,21 @@
                      </svg>
                   </div>
                </div>
-               <button type="button" onclick="submitPayment('card')" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow">Pay Card</button>
+               <button type="button" onclick="submitPayment('card')" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow">Karte bezahlen</button>
            </div>
         </div>
       <% end %>
       
       <div class="text-center mt-6">
-        <%= link_to "Cancel", pos_path(@cash_register), class: "text-gray-500 hover:text-gray-800 underline" %>
+        <%= link_to "Abbruch / Zurück", pos_path(@cash_register), class: "text-gray-500 hover:text-gray-800 underline" %>
       </div>
+    </div>
     </div>
   </div>
 </div>
 
 <script>
+(() => {
   const subtotal = <%= @total %>;
   let voucherTotal = 0;
   let currentTotal = subtotal;
@@ -158,27 +241,45 @@
     if (finalTotalDisplay) finalTotalDisplay.textContent = currentTotal.toFixed(2);
 
     // Update Hidden inputs
-    hiddenDiscountValue.value = discVal;
-    hiddenDiscountType.value = type;
+    if (hiddenDiscountValue) hiddenDiscountValue.value = discVal;
+    if (hiddenDiscountType) hiddenDiscountType.value = type;
 
     // Recalculate Change
     calculateChange();
   }
   
   function calculateChange() {
+     if (!amountTenderedInput) return;
      let tendered = parseFloat(amountTenderedInput.value) || 0;
      let change = Math.max(0, tendered - currentTotal);
-     changeDisplay.textContent = change.toFixed(2);
-     hiddenAmountTendered.value = tendered;
+     if (changeDisplay) changeDisplay.textContent = change.toFixed(2);
+     if (hiddenAmountTendered) hiddenAmountTendered.value = tendered;
   }
 
   if (discountInput) {
       discountInput.addEventListener('input', calculate);
       discountRadios.forEach(radio => radio.addEventListener('change', calculate));
   }
-  amountTenderedInput.addEventListener('input', calculateChange);
+  if (amountTenderedInput) {
+      amountTenderedInput.addEventListener('input', calculateChange);
+  }
   
-  function redeemVoucher() {
+  const tipAmount = document.getElementById('tip_amount');
+  const tipTargetTotal = document.getElementById('tip_target_total');
+  
+  if (tipTargetTotal && tipAmount) {
+     tipTargetTotal.addEventListener('input', function() {
+        let target = parseFloat(this.value) || 0;
+        // Use currentTotal which includes discounts
+        let diff = target - currentTotal;
+        
+        if (diff < 0) diff = 0;
+        
+        tipAmount.value = diff.toFixed(2);
+     });
+  }
+  
+  window.redeemVoucher = function() {
       const input = document.getElementById('voucher_input');
       const val = parseFloat(input.value) || 0;
       
@@ -197,15 +298,11 @@
       }
   }
 
-  // document.getElementById('discount_code').addEventListener('input', (e) => {
-  //     document.getElementById('hidden_voucher_code').value = e.target.value;
-  // });
-
-  function submitPayment(method) {
+  window.submitPayment = function(method) {
       if (method === 'cash') {
           let tendered = parseFloat(amountTenderedInput.value) || 0;
           if (tendered < currentTotal) {
-              alert("Amount tendered is less than total!");
+              alert("Betrag ist weniger als das Total!");
               return;
           }
       }
@@ -214,21 +311,21 @@
       paymentForm.submit();
   }
   
-  // selectPayment styling helper if needed, currently direct buttons handle submit
-  function selectPayment(method) {
-      // Logic to highlight selected box if we separate selection from submission
+  window.selectPayment = function(method) {
+      // Logic to highlight if needed
   }
-  function toggleDiscountCode(event) {
+  window.toggleDiscountCode = function(event) {
       event.preventDefault();
       const section = document.getElementById('discount_code_section');
       const btn = document.getElementById('toggle_discount_code_btn');
       
       if (section.classList.contains('hidden')) {
         section.classList.remove('hidden');
-        btn.textContent = "- Hide discount code";
+        btn.textContent = "- Code ausblenden";
       } else {
         section.classList.add('hidden');
-        btn.textContent = "+ Add discount code";
+        btn.textContent = "+ Gutschein Code";
       }
   }
+})();
 </script>

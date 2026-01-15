@@ -33,7 +33,7 @@ class PosController < ApplicationController
                          .left_joins(:article_sections)
                          .where("article_sections.section_id = ?", @active_section.id)
                          .distinct
-                         .order(:name)
+                         .order("article_sections.sort_order ASC, articles.name ASC")
     else
       @articles = Article.where(status: 'active').order(:name)
     end
@@ -97,7 +97,6 @@ class PosController < ApplicationController
     add_variant_logic(variant)
   end
 
-
   def update_item_quantity
     @item = @order.order_items.find(params[:item_id])
     change = params[:change].to_i
@@ -133,7 +132,9 @@ class PosController < ApplicationController
   end
 
   def payment
-    @total = @order.order_items.sum { |item| item.net_price || (item.quantity * item.unit_price) }
+    @order_items = @order.order_items.includes(:article, :variant)
+    @total = @order_items.sum { |item| item.net_price || (item.quantity * item.unit_price) }
+    @tip_article = Article.find_by(barcode: 'tip')
   end
 
   def process_payment
@@ -329,7 +330,13 @@ class PosController < ApplicationController
     @item.net_price = price
     @item.save!
     
-    redirect_to pos_path(@cash_register, section_id: params[:section_id]), notice: "Added #{@article.name} at #{helpers.number_to_currency(price)}"
+    redirect_path = if params[:return_to] == 'payment'
+                      payment_pos_path(@cash_register)
+                    else
+                      pos_path(@cash_register, section_id: params[:section_id])
+                    end
+    
+    redirect_to redirect_path, notice: "Added #{@article.name} at #{helpers.number_to_currency(price)}"
   end
 
   def withdraw_cash

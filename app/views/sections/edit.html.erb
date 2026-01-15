@@ -10,10 +10,7 @@
         <%= form.label :name, class: "block font-medium text-gray-700" %>
         <%= form.text_field :name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
       </div>
-      <div>
-        <%= form.label :group_filter, "Group Filter (Optional - Manual selection overrides this)", class: "block font-medium text-gray-700" %>
-        <%= form.text_field :group_filter, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
-      </div>
+
       <div>
         <%= form.submit "Update Section Details", class: "bg-[#2C2C2C] text-white px-4 py-2 rounded font-medium hover:bg-black cursor-pointer" %>
       </div>
@@ -29,6 +26,23 @@
           <%= form.submit "Add", class: "bg-[#FFD100] text-[#2C2C2C] px-4 py-2 rounded font-bold hover:bg-yellow-400 cursor-pointer" %>
         <% end %>
         <p class="text-sm text-gray-500 mt-2">Scan an item to add it to this section manualy.</p>
+        
+        <% if defined?(@search_results) && @search_results.present? %>
+        <div class="mt-4 border-t border-gray-100 pt-4">
+           <h3 class="font-bold text-sm mb-2 text-gray-700">Select Article:</h3>
+           <ul class="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+             <% @search_results.each do |result| %>
+               <li class="py-2 flex justify-between items-center group">
+                 <div>
+                    <div class="font-medium text-sm text-gray-900"><%= result.name %></div>
+                    <div class="text-xs text-gray-500 font-mono"><%= result.sku %></div>
+                 </div>
+                 <%= button_to "Hinzufügen", add_article_section_path(@section, article_id: result.id, search_query: params[:search_query]), method: :post, class: "bg-gray-100 text-gray-700 px-3 py-1 rounded text-xs font-bold hover:bg-[#FFD100] hover:text-black transition" %>
+               </li>
+             <% end %>
+           </ul>
+        </div>
+        <% end %>
       </div>
     </div>
 
@@ -36,12 +50,15 @@
       <h2 class="text-xl font-bold mb-4">Current Articles</h2>
       <div class="bg-white shadow rounded-lg overflow-hidden">
         <% if @articles.any? %>
-          <ul class="divide-y divide-gray-200">
+          <ul class="divide-y divide-gray-200" data-controller="sortable" data-sortable-url-value="<%= reorder_section_path(@section) %>">
             <% @articles.each do |article| %>
-              <li class="p-4 flex justify-between items-center hover:bg-gray-50">
-                <div>
-                  <p class="font-medium text-gray-900"><%= article.name %></p>
-                  <p class="text-sm text-gray-500"><%= article.sku %></p>
+              <li class="p-4 flex justify-between items-center hover:bg-gray-50 cursor-move" data-id="<%= article.id %>">
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    <div>
+                      <p class="font-medium text-gray-900"><%= article.name %></p>
+                      <p class="text-sm text-gray-500"><%= article.sku %></p>
+                    </div>
                 </div>
                 <%= button_to "Remove", remove_article_section_path(@section, article_id: article.id), method: :delete, class: "text-red-600 hover:text-red-900 text-sm font-medium" %>
               </li>
@@ -50,9 +67,6 @@
         <% else %>
           <div class="p-6 text-center text-gray-500">
             No manual articles added.
-            <% if @section.group_filter.present? %>
-              <p class="text-xs mt-1">Articles from group "<%= @section.group_filter %>" will be included automatically.</p>
-            <% end %>
           </div>
         <% end %>
       </div>

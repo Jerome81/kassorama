@@ -1,0 +1,22 @@
+<%= form_with(model: variant, class: "space-y-4") do |form| %>
+  <div>
+    <%= form.label :name, class: "block font-medium text-gray-700" %>
+    <%= form.text_field :name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
+  </div>
+    <div>
+    <%= form.label :sku, class: "block font-medium text-gray-700" %>
+    <%= form.text_field :sku, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
+  </div>
+  <div>
+    <%= form.label :barcode, class: "block font-medium text-gray-700" %>
+    <%= form.text_field :barcode, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
+  </div>
+    <div>
+    <%= form.label :price, class: "block font-medium text-gray-700" %>
+    <%= form.number_field :price, step: 0.01, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100]" %>
+  </div>
+  <div>
+    <%= link_to "Cancel", article_path(variant.article), class: "mr-2 text-gray-500 hover:text-gray-700" %>
+    <%= form.submit "Update Variant", class: "bg-[#2C2C2C] text-white px-4 py-2 rounded font-medium hover:bg-black cursor-pointer" %>
+  </div>
+<% end %>

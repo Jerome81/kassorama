@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+  get 'variants/edit'
+  get 'variants/update'
   resources :suppliers
   get 'revolut_transactions/index'
   get 'login', to: 'sessions#new'
@@ -43,6 +45,7 @@ Rails.application.routes.draw do
     member do
       post :add_article
       delete :remove_article
+      patch :reorder
     end
   end
 
@@ -56,6 +59,7 @@ Rails.application.routes.draw do
     end
   end
   resources :articles
+  resources :variants
   resources :pos, controller: 'pos', only: [:index, :show], as: 'pos' do
     member do
       post :add_item

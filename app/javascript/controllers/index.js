@@ -6,3 +6,6 @@ import { application } from "./application"
 
 import RevolutTransactionController from "./revolut_transaction_controller"
 application.register("revolut-transaction", RevolutTransactionController)
+
+import SortableController from "./sortable_controller"
+application.register("sortable", SortableController)
