@@ -5,6 +5,21 @@
 
   <%= render "form", location: @location %>
 
-  <%= link_to "Show this location", @location, class: "w-full sm:w-auto text-center mt-2 sm:mt-0 sm:ml-2 rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
-  <%= link_to "Back to locations", locations_path, class: "w-full sm:w-auto text-center mt-2 sm:mt-0 sm:ml-2 rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+  <div class="flex items-center gap-2 mt-4">
+    <%= link_to "Show this location", @location, class: "rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+    <%= link_to "Back to locations", locations_path, class: "rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+    
+    <div class="flex-grow"></div>
+    
+    <% has_stock = @location.stocks.sum(:quantity) != 0 %>
+    <% if has_stock %>
+      <div class="relative group inline-block" title="Kann nicht gelöscht werden, da noch Artikel an Lager">
+         <button disabled class="rounded-md px-3.5 py-2.5 bg-red-100 text-red-300 font-medium cursor-not-allowed">
+            Delete Location
+         </button>
+      </div>
+    <% else %>
+      <%= button_to "Delete Location", @location, method: :delete, class: "rounded-md px-3.5 py-2.5 bg-red-100 hover:bg-red-200 text-red-600 font-medium cursor-pointer" %>
+    <% end %>
+  </div>
 </div>

@@ -1,16 +1,23 @@
-<div class="mx-auto w-full max-w-7xl h-[calc(100vh-100px)] flex gap-6 p-6">
+<div class="mx-auto w-full max-w-7xl h-[calc(100vh-100px)] flex gap-6 px-6 pb-6 pt-24">
   <!-- Left Column: Order List -->
   <div class="w-5/12 flex flex-col">
      <div class="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100 flex-grow flex flex-col h-full">
-       <div class="bg-gray-50 border-b border-gray-200 px-6 py-4">
-          <h2 class="text-xl font-bold text-gray-800">Bestellübersicht</h2>
-          <% if @order.name.present? %>
-            <div class="text-sm text-yellow-600 font-bold mt-1"><%= @order.name %></div>
+       <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center gap-4 relative z-10">
+          <%= link_to pos_path(@cash_register), class: "flex-shrink-0 p-2 -ml-2 rounded-full hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition", title: "Zurück" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
           <% end %>
+          <div class="flex-grow min-w-0">
+            <h2 class="text-xl font-bold text-gray-800 leading-tight">Bestellübersicht</h2>
+            <% if @order.name.present? %>
+              <div class="text-sm text-yellow-600 font-bold mt-0.5 truncate"><%= @order.name %></div>
+            <% end %>
+          </div>
        </div>
        <div class="overflow-y-auto flex-grow">
           <table class="min-w-full divide-y divide-gray-200">
-             <thead class="bg-gray-50 sticky top-0">
+             <thead class="bg-gray-50 sticky top-0 z-0">
                <tr>
                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Artikel</th>
                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Menge</th>
@@ -50,7 +57,7 @@
   </div>
 
   <!-- Right Column: Payment Controls -->
-  <div class="w-7/12 flex flex-col items-center justify-center">
+  <div class="w-7/12 flex flex-col items-center justify-start pt-12">
     <div class="bg-white shadow-lg rounded-2xl w-full max-w-2xl p-8 border border-gray-100">
     <h1 class="text-3xl font-bold text-[#2C2C2C] mb-8 text-center">Bezahlung</h1>
 
@@ -186,9 +193,7 @@
         </div>
       <% end %>
       
-      <div class="text-center mt-6">
-        <%= link_to "Abbruch / Zurück", pos_path(@cash_register), class: "text-gray-500 hover:text-gray-800 underline" %>
-      </div>
+
     </div>
     </div>
   </div>
@@ -300,6 +305,12 @@
 
   window.submitPayment = function(method) {
       if (method === 'cash') {
+          if (!amountTenderedInput.value) {
+              amountTenderedInput.value = currentTotal.toFixed(2);
+              if (hiddenAmountTendered) hiddenAmountTendered.value = currentTotal.toFixed(2);
+              if (changeDisplay) changeDisplay.textContent = '0.00';
+          }
+          
           let tendered = parseFloat(amountTenderedInput.value) || 0;
           if (tendered < currentTotal) {
               alert("Betrag ist weniger als das Total!");
