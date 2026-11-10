@@ -8,7 +8,7 @@
 
   <% if @locations.empty? %>
     <div class="text-center p-12 bg-white rounded-lg shadow">
-       <p class="text-gray-500">No locations defined. Please create a location first.</p>
+       <p class="text-gray-500">Keine Lagerorte definiert. Bitte erstellen Sie zuerst einen Lagerort.</p>
     </div>
   <% else %>
     <div class="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
@@ -23,7 +23,7 @@
                  <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider <%= 'bg-yellow-50 text-yellow-800 border-x border-yellow-200' if @primary_location && location.id == @primary_location.id %>">
                    <%= location.name %>
                    <% if @primary_location && location.id == @primary_location.id %>
-                      <span class="block text-[10px] lowercase font-normal">(Primary)</span>
+                      <span class="block text-[10px] lowercase font-normal">(Hauptlager)</span>
                    <% end %>
                  </th>
                <% end %>

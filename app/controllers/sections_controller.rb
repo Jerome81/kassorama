@@ -21,7 +21,7 @@ class SectionsController < ApplicationController
 
   def update
     if @section.update(section_params)
-      redirect_to edit_section_path(@section), notice: "Section updated."
+      redirect_to edit_section_path(@section), notice: "Bereich aktualisiert."
     else
       render :edit
     end
@@ -50,7 +50,7 @@ class SectionsController < ApplicationController
     elsif articles.count > 1
       redirect_to edit_section_path(@section, search_query: query)
     else
-      flash[:alert] = "Article not found"
+      flash[:alert] = "Artikel nicht gefunden"
       redirect_to edit_section_path(@section)
     end
   end
@@ -58,7 +58,7 @@ class SectionsController < ApplicationController
   def remove_article
     article = Article.find(params[:article_id])
     @section.articles.delete(article)
-    redirect_to edit_section_path(@section), notice: "Removed #{article.name}"
+    redirect_to edit_section_path(@section), notice: "#{article.name} entfernt"
   end
 
   private
@@ -66,9 +66,9 @@ class SectionsController < ApplicationController
     def add_single_article(article)
       unless @section.articles.include?(article)
         @section.articles << article
-        flash[:notice] = "Added #{article.name}"
+        flash[:notice] = "#{article.name} hinzugefügt"
       else
-        flash[:alert] = "Article already in section"
+        flash[:alert] = "Artikel ist bereits in diesem Bereich"
       end
       
       if params[:search_query].present?

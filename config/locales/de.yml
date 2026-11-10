@@ -1,0 +1,161 @@
+de:
+  date:
+    formats:
+      default: "%d.%m.%Y"
+      short: "%d. %b"
+      long: "%d. %B %Y"
+    day_names: [Sonntag, Montag, Dienstag, Mittwoch, Donnerstag, Freitag, Samstag]
+    abbr_day_names: [So, Mo, Di, Mi, Do, Fr, Sa]
+    month_names: [~, Januar, Februar, März, April, Mai, Juni, Juli, August, September, Oktober, November, Dezember]
+    abbr_month_names: [~, Jan, Feb, Mär, Apr, Mai, Jun, Jul, Aug, Sep, Okt, Nov, Dez]
+    order:
+      - :day
+      - :month
+      - :year
+
+  time:
+    formats:
+      default: "%d.%m.%Y %H:%M"
+      short: "%d. %b %H:%M"
+      long: "%d. %B %Y %H:%M"
+      time: "%H:%M"
+    am: "vormittags"
+    pm: "nachmittags"
+
+  number:
+    format:
+      separator: "."
+      delimiter: "'"
+      precision: 2
+      significant: false
+      strip_insignificant_zeros: false
+    currency:
+      format:
+        unit: "CHF"
+        format: "%n %u"
+        separator: "."
+        delimiter: "'"
+        precision: 2
+        significant: false
+        strip_insignificant_zeros: false
+    percentage:
+      format:
+        delimiter: "'"
+        format: "%n%"
+    precision:
+      format:
+        delimiter: "'"
+
+  helpers:
+    select:
+      prompt: "Bitte wählen"
+    submit:
+      create: "%{model} erstellen"
+      update: "%{model} speichern"
+      submit: "Speichern"
+
+  activerecord:
+    models:
+      article: "Artikel"
+      article_category: "Kategorie"
+      cash_register: "Kasse"
+      entry: "Buchung"
+      inventory: "Inventar"
+      inventory_line: "Inventarposition"
+      location: "Lagerort"
+      order: "Bestellung"
+      order_item: "Bestellposition"
+      section: "Bereich"
+      setting: "Einstellung"
+      stock: "Bestand"
+      supplier: "Lieferant"
+      tax_code: "MWSt-Code"
+      user: "Benutzer"
+      variant: "Variante"
+    attributes:
+      article:
+        name: "Name"
+        sku: "Art.-Nr. (SKU)"
+        barcode: "Barcode"
+        price: "Preis"
+        cost: "Einstandspreis"
+        status: "Status"
+        price_type: "Preistyp"
+        is_voucher: "Ist Gutschein"
+        tax_code: "MWSt-Code"
+        tax_code_id: "Steuersatz (MWSt)"
+        article_category: "Kategorie"
+        article_category_id: "Kategorie"
+        supplier: "Lieferant"
+        supplier_id: "Lieferant"
+        booking_account: "Buchungskonto"
+        image: "Bild"
+      cash_register:
+        name: "Name"
+        status: "Status"
+        amount: "Bargeldbestand"
+        stock_location_id: "Lagerort"
+        precreated_tabs: "Vorgefertigte Tabs"
+        terminal_ip: "Kartenterminal IP-Adresse"
+        terminal_port: "Kartenterminal Port"
+      location:
+        name: "Name"
+        address: "Adresse"
+      user:
+        name: "Name"
+        pin: "PIN"
+        role: "Rolle"
+      variant:
+        name: "Name"
+        sku: "Art.-Nr. (SKU)"
+        barcode: "Barcode"
+        price: "Preis"
+        image: "Bild"
+      tax_code:
+        rate: "Steuersatz"
+      supplier:
+        name: "Name"
+      article_category:
+        name: "Name"
+      inventory:
+        name: "Name"
+    errors:
+      messages:
+        record_invalid: "Gültigkeitsprüfung ist fehlgeschlagen: %{errors}"
+        restrict_dependent_destroy:
+          has_one: "Datensatz kann nicht gelöscht werden, da ein abhängiger %{record}-Datensatz existiert."
+          has_many: "Datensatz kann nicht gelöscht werden, da abhängige %{record}-Datensätze existieren."
+
+  errors:
+    format: "%{attribute} %{message}"
+    messages:
+      accepted: "muss akzeptiert werden"
+      blank: "muss ausgefüllt werden"
+      confirmation: "stimmt nicht mit %{attribute} überein"
+      empty: "darf nicht leer sein"
+      equal_to: "muss genau %{count} sein"
+      even: "muss gerade sein"
+      exclusion: "ist reserviert"
+      greater_than: "muss grösser als %{count} sein"
+      greater_than_or_equal_to: "muss grösser oder gleich %{count} sein"
+      inclusion: "ist kein gültiger Wert"
+      invalid: "ist nicht gültig"
+      less_than: "muss kleiner als %{count} sein"
+      less_than_or_equal_to: "muss kleiner oder gleich %{count} sein"
+      model_invalid: "Gültigkeitsprüfung ist fehlgeschlagen: %{errors}"
+      not_a_number: "ist keine Zahl"
+      not_an_integer: "muss eine ganze Zahl sein"
+      odd: "muss ungerade sein"
+      other_than: "darf nicht %{count} sein"
+      present: "darf nicht ausgefüllt werden"
+      required: "muss ausgefüllt werden"
+      taken: "ist bereits vergeben"
+      too_long:
+        one: "ist zu lang (maximal 1 Zeichen)"
+        other: "ist zu lang (maximal %{count} Zeichen)"
+      too_short:
+        one: "ist zu kurz (mindestens 1 Zeichen)"
+        other: "ist zu kurz (mindestens %{count} Zeichen)"
+      wrong_length:
+        one: "hat die falsche Länge (muss genau 1 Zeichen lang sein)"
+        other: "hat die falsche Länge (muss genau %{count} Zeichen lang sein)"

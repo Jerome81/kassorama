@@ -1,7 +1,7 @@
 <%= form_with(model: article_category, class: "contents") do |form| %>
   <% if article_category.errors.any? %>
     <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mt-3">
-      <h2><%= pluralize(article_category.errors.count, "error") %> prohibited this article_category from being saved:</h2>
+      <h2><%= article_category.errors.count == 1 ? "1 Fehler verhinderte das Speichern:" : "#{article_category.errors.count} Fehler verhinderten das Speichern:" %></h2>
 
       <ul class="list-disc ml-6">
         <% article_category.errors.each do |error| %>

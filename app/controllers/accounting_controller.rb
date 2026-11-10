@@ -18,7 +18,7 @@ class AccountingController < ApplicationController
                   .includes(order_items: [:article])
 
     if orders.empty?
-      redirect_to accounting_path, alert: "No orders found to book for #{date}."
+      redirect_to accounting_path, alert: "Keine Bestellungen zum Verbuchen für #{date.strftime('%d.%m.%Y')} gefunden."
       return
     end
 
@@ -134,7 +134,7 @@ class AccountingController < ApplicationController
     transactions = Transaction.where(exported: nil)
 
     if transactions.empty?
-      redirect_to accounting_path, alert: "No open transactions to book."
+      redirect_to accounting_path, alert: "Keine offenen Transaktionen zum Verbuchen vorhanden."
       return
     end
 
@@ -208,8 +208,88 @@ class AccountingController < ApplicationController
     @bexio_accounts = BexioAccount.order(:account_number)
     @bexio_tax_codes = BexioTaxCode.order(:name)
   end
+  def update_settings
+    Setting[:bexio_client_id] = params[:client_id]&.strip
+    Setting[:bexio_client_secret] = params[:client_secret]&.strip
+    redirect_to accounting_settings_path, notice: "Einstellungen gespeichert."
+  end
 
-  # ... existing methods ...
+  def bexio_auth
+    service = BexioService.new
+    if service.configured?
+      redirect_to service.authorize_url, allow_other_host: true
+    else
+      redirect_to accounting_settings_path, alert: "Bitte konfigurieren Sie zuerst Client-ID und Secret."
+    end
+  end
+
+  def bexio_callback
+    code = params[:code]
+    service = BexioService.new
+    
+    if service.exchange_token(code)
+      redirect_to accounting_settings_path, notice: "Erfolgreich mit Bexio verbunden!"
+    else
+      redirect_to accounting_settings_path, alert: "Verbindung mit Bexio fehlgeschlagen."
+    end
+  rescue => e
+    redirect_to accounting_settings_path, alert: "Fehler: #{e.message}"
+  end
+
+  def export_bexio
+    entries = Entry.where(exported_at: nil)
+    
+    if params[:date].present?
+      entries = entries.where(booking_date: params[:date])
+    end
+    
+    if entries.empty?
+      redirect_to entries_path, alert: "Keine Buchungen zum Exportieren für das ausgewählte Datum vorhanden."
+      return
+    end
+
+    service = BexioService.new
+    
+    success_count = 0
+    error_count = 0
+    
+    entries_by_date = entries.group_by(&:booking_date)
+    collected_errors = []
+    
+    entries_by_date.each do |date, daily_entries|
+      lines = []
+      
+      daily_agg = daily_entries.group_by { |e| [e.debit_account, e.credit_account, e.tax_code] }
+      
+      daily_agg.each do |(debit, credit, tax), group|
+        sum = group.sum(&:amount)
+        lines << {
+          description: "Tagesumsatz #{date.strftime('%d.%m.%Y')}",
+          amount: sum,
+          debit_account: debit,
+          credit_account: credit,
+          tax_code: tax
+        }
+      end
+      
+      begin
+        service.send_manual_entry(date, "Tagesumsatz #{date.strftime('%d.%m.%Y')}", lines)
+        Entry.where(id: daily_entries.map(&:id)).update_all(exported_at: Time.current)
+        success_count += 1
+      rescue => e
+        error_msg = "#{date.strftime('%d.%m.%Y')}: #{e.message}"
+        Rails.logger.error "Bexio Export Error: #{error_msg}"
+        collected_errors << error_msg
+        error_count += 1
+      end
+    end
+
+    if error_count == 0
+      redirect_to entries_path, notice: "#{success_count} Buchungen erfolgreich nach Bexio exportiert."
+    else
+      redirect_to entries_path, alert: "#{success_count} Buchungen exportiert. Fehlgeschlagen: #{collected_errors.join(', ')}"
+    end
+  end
 
   def import_accounts
     service = BexioService.new
@@ -231,9 +311,9 @@ class AccountingController < ApplicationController
       end
     end
     
-    redirect_to accounting_settings_path, notice: "Successfully imported #{count} accounts from Bexio."
+    redirect_to accounting_settings_path, notice: "#{count} Konten erfolgreich aus Bexio importiert."
   rescue => e
-    redirect_to accounting_settings_path, alert: "Import failed: #{e.message}"
+    redirect_to accounting_settings_path, alert: "Import fehlgeschlagen: #{e.message}"
   end
 
   def import_tax_codes
@@ -254,8 +334,8 @@ class AccountingController < ApplicationController
       end
     end
     
-    redirect_to accounting_settings_path, notice: "Successfully imported #{count} tax codes from Bexio."
+    redirect_to accounting_settings_path, notice: "#{count} Steuercodes erfolgreich aus Bexio importiert."
   rescue => e
-    redirect_to accounting_settings_path, alert: "Import failed: #{e.message}"
+    redirect_to accounting_settings_path, alert: "Import fehlgeschlagen: #{e.message}"
   end
 end

@@ -38,7 +38,7 @@ class CashRegistersController < ApplicationController
     @cash_register = CashRegister.new(cash_register_params)
 
     if @cash_register.save
-      redirect_to cash_registers_url, notice: "Cash register was successfully created."
+      redirect_to cash_registers_url, notice: "Kasse wurde erfolgreich erstellt."
     else
       render :new, status: :unprocessable_entity
     end
@@ -46,7 +46,7 @@ class CashRegistersController < ApplicationController
 
   def update
     if @cash_register.update(cash_register_params)
-      redirect_to cash_registers_url, notice: "Cash register was successfully updated."
+      redirect_to cash_registers_url, notice: "Kasse wurde erfolgreich aktualisiert."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -55,7 +55,7 @@ class CashRegistersController < ApplicationController
   def destroy
     @cash_register.destroy!
 
-    redirect_to cash_registers_url, notice: "Cash register was successfully destroyed."
+    redirect_to cash_registers_url, notice: "Kasse wurde erfolgreich gelöscht."
   end
 
   def transactions
@@ -95,7 +95,8 @@ class CashRegistersController < ApplicationController
        # Reverse calculation of balance BEFORE this event
        if item[:type] == 'order'
          if obj.payment_method == 'cash'
-           current_balance -= (obj.total_amount || 0)
+           cash_paid = [(obj.total_amount || 0).to_f - obj.voucher_amount, 0.0].max
+           current_balance -= cash_paid
          end
        elsif item[:type] == 'transaction'
          if obj.transaction_type == 'removal'
@@ -113,6 +114,12 @@ class CashRegistersController < ApplicationController
 
   def cash_count
     @cash_register = CashRegister.find(params[:id])
+    is_prefetch = [
+      request.headers["X-Sec-Purpose"],
+      request.headers["Sec-Purpose"],
+      request.headers["Purpose"]
+    ].compact.any? { |v| v.to_s.downcase.include?("prefetch") }
+    PrinterClient.try_open_drawer(@cash_register) unless is_prefetch
   end
 
   def save_cash_count
@@ -140,6 +147,6 @@ class CashRegistersController < ApplicationController
     end
 
     def cash_register_params
-      params.require(:cash_register).permit(:name, :status, :stock_location_id, :amount, :precreated_tabs, sections_attributes: [:id, :name, :_destroy])
+      params.require(:cash_register).permit(:name, :status, :stock_location_id, :amount, :precreated_tabs, :terminal_ip, :terminal_port, :printer_ip, :printer_port, sections_attributes: [:id, :name, :_destroy])
     end
 end

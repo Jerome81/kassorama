@@ -1,7 +1,7 @@
 <%= form_with(model: location, class: "contents") do |form| %>
   <% if location.errors.any? %>
     <div id="error_explanation" class="bg-red-50 text-red-500 px-3 py-2 font-medium rounded-md mt-3">
-      <h2><%= pluralize(location.errors.count, "error") %> prohibited this location from being saved:</h2>
+      <h2><%= location.errors.count == 1 ? "1 Fehler verhinderte das Speichern:" : "#{location.errors.count} Fehler verhinderten das Speichern:" %></h2>
 
       <ul class="list-disc ml-6">
         <% location.errors.each do |error| %>

@@ -30,7 +30,7 @@
       <!-- content -->
       <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
         <div class="flex flex-col items-center w-full px-2 sm:px-4">
-             <h2 class="text-2xl font-bold mb-6 text-center text-gray-900" id="modal_user_name">Enter PIN</h2>
+             <h2 class="text-2xl font-bold mb-6 text-center text-gray-900" id="modal_user_name">PIN eingeben</h2>
              
              <input type="password" id="pin_input" class="w-full max-w-xs text-center text-4xl tracking-[0.5em] font-bold border-b-4 border-gray-200 focus:border-[#FFD100] outline-none mb-8 pb-2 text-gray-800 placeholder-gray-300 bg-transparent" maxlength="6" autofocus placeholder="••••••">
              
@@ -58,7 +58,7 @@
              </div>
              
              <div class="mt-6 text-center">
-                 <button type="button" onclick="closeModal()" class="text-sm text-gray-500 hover:text-gray-700 underline">Cancel</button>
+                 <button type="button" onclick="closeModal()" class="text-sm text-gray-500 hover:text-gray-700 underline">Abbrechen</button>
              </div>
         </div>
       </div>
@@ -71,7 +71,7 @@
 
   function promptPin(userId, userName) {
       currentUserId = userId;
-      document.getElementById('modal_user_name').textContent = "PIN for " + userName;
+      document.getElementById('modal_user_name').textContent = "PIN für " + userName;
       document.getElementById('pin_modal').classList.remove('hidden');
       document.getElementById('pin_input').value = '';
       document.getElementById('pin_input').focus();

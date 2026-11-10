@@ -1,4 +1,4 @@
-<% content_for :title, "Locations" %>
+<% content_for :title, "Lagerorte" %>
 
 <div class="w-full">
   <% if notice.present? %>
@@ -6,8 +6,8 @@
   <% end %>
 
   <div class="flex justify-between items-center">
-    <h1 class="font-bold text-4xl">Locations</h1>
-    <%= link_to "New location", new_location_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold" %>
+    <h1 class="font-bold text-4xl">Lagerorte</h1>
+    <%= link_to "Neuer Lagerort", new_location_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold" %>
   </div>
 
   <div class="relative overflow-x-auto shadow-md sm:rounded-lg mt-8">
@@ -15,7 +15,7 @@
       <thead class="text-xs text-white uppercase bg-[#2C2C2C]">
         <tr>
           <th scope="col" class="px-6 py-3">Name</th>
-          <th scope="col" class="px-6 py-3 text-right">Actions</th>
+          <th scope="col" class="px-6 py-3 text-right">Aktionen</th>
         </tr>
       </thead>
       <tbody>
@@ -25,8 +25,8 @@
               <%= location.name %>
             </td>
             <td class="px-6 py-4 text-right">
-              <%= link_to "Show", location, class: "font-medium text-[#2C2C2C] hover:underline hover:text-[#FFD100] mr-3" %>
-              <%= link_to "Edit", edit_location_path(location), class: "font-medium text-[#2C2C2C] hover:underline hover:text-[#FFD100]" %>
+              <%= link_to "Anzeigen", location, class: "font-medium text-[#2C2C2C] hover:underline hover:text-[#FFD100] mr-3" %>
+              <%= link_to "Bearbeiten", edit_location_path(location), class: "font-medium text-[#2C2C2C] hover:underline hover:text-[#FFD100]" %>
             </td>
           </tr>
         <% end %>

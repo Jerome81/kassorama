@@ -10,7 +10,7 @@ class RevolutTransactionsController < ApplicationController
   def import
     file = params[:file]
     if file.nil?
-      redirect_to revolut_transactions_path, alert: "Please upload a CSV file."
+      redirect_to revolut_transactions_path, alert: "Bitte laden Sie eine CSV-Datei hoch."
       return
     end
 
@@ -69,11 +69,11 @@ class RevolutTransactionsController < ApplicationController
            count += 1
         end
       end
-      redirect_to revolut_transactions_path, notice: "Successfully imported #{count} transactions."
+      redirect_to revolut_transactions_path, notice: "#{count} Transaktionen erfolgreich importiert."
     rescue => e
       puts "Import Error: #{e.message}"
       puts e.backtrace.join("\n")
-      redirect_to revolut_transactions_path, alert: "Import failed: #{e.message}"
+      redirect_to revolut_transactions_path, alert: "Import fehlgeschlagen: #{e.message}"
     end
   end
 
@@ -102,14 +102,14 @@ class RevolutTransactionsController < ApplicationController
         trans.update!(exported: Date.today, state: 'exported')
         count += 1
       rescue => e
-        errors << "Row #{trans.id}: #{e.message}"
+        errors << "Zeile #{trans.id}: #{e.message}"
       end
     end
     
     if errors.empty?
-      redirect_to revolut_transactions_path, notice: "Successfully exported #{count} transactions to Bexio."
+      redirect_to revolut_transactions_path, notice: "#{count} Transaktionen erfolgreich nach Bexio exportiert."
     else
-      redirect_to revolut_transactions_path, alert: "Exported #{count} transactions. Errors: #{errors.join(', ')}"
+      redirect_to revolut_transactions_path, alert: "#{count} Transaktionen exportiert. Fehler: #{errors.join(', ')}"
     end
   end
 

@@ -1,5 +1,5 @@
 class PosController < ApplicationController
-  before_action :set_register, only: [:show, :add_item, :add_variant_item, :checkout, :update_item_quantity, :remove_item, :payment, :process_payment, :add_free_price_item, :save_free_price_item, :withdraw_cash, :process_withdrawal, :park_order, :restore_order, :update_item_discount]
+  before_action :set_register, only: [:show, :add_item, :add_variant_item, :checkout, :update_item_quantity, :remove_item, :payment, :process_payment, :abort_payment, :print_receipt, :add_free_price_item, :save_free_price_item, :withdraw_cash, :process_withdrawal, :park_order, :restore_order, :update_item_discount]
   before_action :set_current_order, only: [:show, :add_item, :add_variant_item, :checkout, :update_item_quantity, :remove_item, :payment, :process_payment, :save_free_price_item, :park_order, :restore_order, :update_item_discount]
 
   def index
@@ -23,10 +23,10 @@ class PosController < ApplicationController
     if params[:search_query].present?
       articles = Article.where(status: 'active').where(barcode: params[:search_query])
       articles = Article.where(status: 'active').where(sku: params[:search_query]) if articles.empty?
-      articles = Article.where(status: 'active').where("name LIKE ?", "%#{params[:search_query]}%") if articles.empty?
+      articles = Article.where(status: 'active').left_joins(:variants).where("articles.name LIKE :query OR variants.name LIKE :query", query: "%#{params[:search_query]}%").distinct if articles.empty?
       
       @articles = articles.order(:name)
-      flash.now[:notice] = "Found #{@articles.count} results for '#{params[:search_query]}'" if @articles.any?
+      flash.now[:notice] = "#{@articles.count} Ergebnisse für '#{params[:search_query]}' gefunden" if @articles.any?
     elsif @active_section
       # Fetch articles manually assigned to the section
       @articles = Article.where(status: 'active')
@@ -56,7 +56,7 @@ class PosController < ApplicationController
     
     articles = Article.where(status: 'active').where(barcode: query)
     articles = Article.where(status: 'active').where(sku: query) if articles.empty?
-    articles = Article.where(status: 'active').where("name LIKE ?", "%#{query}%") if articles.empty?
+    articles = Article.where(status: 'active').left_joins(:variants).where("articles.name LIKE :query OR variants.name LIKE :query", query: "%#{query}%").distinct if articles.empty?
     
     if articles.count == 1
       article = articles.first
@@ -65,7 +65,7 @@ class PosController < ApplicationController
       if article.variants.any?
         respond_to do |format|
           format.turbo_stream { render turbo_stream: turbo_stream.append("modal-container", partial: "pos/variant_selection_modal", locals: { article: article }) }
-          format.html { redirect_to pos_path(@cash_register), alert: "Please select a variant." }
+          format.html { redirect_to pos_path(@cash_register), alert: "Bitte wählen Sie eine Variante." }
         end
         return
       end
@@ -80,14 +80,14 @@ class PosController < ApplicationController
         @item.discount = 0
         @item.net_price = @item.gross_price
         @item.save!
-        flash[:notice] = "Added #{article.name}"
+        flash[:notice] = "#{article.name} hinzugefügt"
         redirect_to pos_path(@cash_register, section_id: params[:section_id])
       end
     elsif articles.count > 1
       # Redirect to show action with search results
       redirect_to pos_path(@cash_register, section_id: params[:section_id], search_query: query)
     else
-      flash[:alert] = "Article not found"
+      flash[:alert] = "Artikel nicht gefunden"
       redirect_to pos_path(@cash_register, section_id: params[:section_id])
     end
   end
@@ -128,7 +128,7 @@ class PosController < ApplicationController
       @order.update(name: nil)
     end
     
-    redirect_to pos_path(@cash_register, section_id: params[:section_id]), notice: "Removed #{@item.article.name}"
+    redirect_to pos_path(@cash_register, section_id: params[:section_id]), notice: "#{@item.article.name} entfernt"
   end
 
   def payment
@@ -139,14 +139,21 @@ class PosController < ApplicationController
 
   def process_payment
     if @order.order_items.empty?
-      redirect_to pos_path(@cash_register), alert: "Cart is empty"
+      respond_to do |format|
+        format.json { render json: { success: false, result_message: "Warenkorb ist leer", redirect_url: pos_path(@cash_register) }, status: :unprocessable_entity }
+        format.html { redirect_to pos_path(@cash_register), alert: "Warenkorb ist leer" }
+      end
       return
     end
 
     stock_location = @cash_register.stock_location
     
     unless stock_location
-      redirect_to pos_path(@cash_register), alert: "This register is not linked to a stock location. Please contact admin."
+      msg = "Diese Kasse ist keinem Lagerort zugewiesen. Bitte kontaktieren Sie den Administrator."
+      respond_to do |format|
+        format.json { render json: { success: false, result_message: msg, redirect_url: pos_path(@cash_register) }, status: :unprocessable_entity }
+        format.html { redirect_to pos_path(@cash_register), alert: msg }
+      end
       return
     end
 
@@ -199,7 +206,39 @@ class PosController < ApplicationController
     voucher_amount = params[:voucher_amount].to_f
     voucher_info = params[:voucher_code]
     if voucher_amount > 0
-       voucher_info = [voucher_info, "Amount: #{helpers.number_to_currency(voucher_amount)}"].compact.join(" - ")
+       voucher_info = [voucher_info, "Betrag: #{helpers.number_to_currency(voucher_amount)}"].compact.join(" - ")
+    end
+
+    print "Payment:", payment_method, "\n"
+    print "Terminal IP:", @cash_register.terminal_ip, "\n"
+    print "Terminal Port:", @cash_register.terminal_port, "\n"
+    print "Final total:", final_total, "\n"
+    card_amount = [final_total - voucher_amount, 0.0].max.round(2)
+    if payment_method == 'card' && @cash_register.terminal_ip.present? && card_amount > 0
+      print "Kontaktiere Kreditkarten Terminal at :", @cash_register.terminal_ip, ":", @cash_register.terminal_port, "\n"
+      begin
+        TerminaloramaClient.pay(
+          ip: @cash_register.terminal_ip,
+          port: @cash_register.terminal_port,
+          amount: card_amount,
+          currency: "CHF",
+          reference_number: "ORDER-#{@order.id}"
+        )
+      rescue TerminaloramaClient::PaymentError => e
+        respond_to do |format|
+          format.json do
+            render json: {
+              success: false,
+              result_code: e.result_code,
+              overall_result: e.overall_result,
+              result_message: e.message,
+              redirect_url: payment_pos_path(@cash_register)
+            }, status: :unprocessable_entity
+          end
+          format.html { redirect_to payment_pos_path(@cash_register), alert: e.message }
+        end
+        return
+      end
     end
 
     success = false
@@ -292,21 +331,173 @@ class PosController < ApplicationController
     end
     
     if success
-       change = 0
+       to_pay = [final_total - voucher_amount, 0].max.round(2)
+       tendered = to_pay
+       change = 0.0
        if params[:amount_tendered].present?
          tendered = params[:amount_tendered].to_s.gsub(',', '.').to_f
-         to_pay = [final_total - voucher_amount, 0].max
-         change = [tendered - to_pay, 0].max
+         change = [tendered - to_pay, 0].max.round(2)
        end
        
-       notice_msg = "Transaction completed!"
+       notice_msg = "Transaktion abgeschlossen!"
        if payment_method == 'cash'
-          notice_msg += " Change: #{helpers.number_to_currency(change)}"
+          notice_msg += " Rückgeld: #{helpers.number_to_currency(change)}"
+          PrinterClient.try_open_drawer(@cash_register)
        end
+
+       receipt_items = @order.order_items.includes({ article: :tax_code }, :variant).map do |item|
+         gross = (item.gross_price || (item.quantity * item.unit_price)).to_f.round(2)
+         disc = item.discount.to_f.round(2)
+         net = (item.net_price || (gross - disc)).to_f.round(2)
+         {
+           name: item.article.name,
+           variant: item.variant&.name,
+           quantity: item.quantity,
+           unit_price: item.unit_price.to_f.round(2),
+           gross_price: gross,
+           discount: disc,
+           total_amount: net,
+           tax_code: item.article.tax_code&.rate.to_f
+         }
+       end
+
+       receipt_data = {
+         order_id: @order.id,
+         order_name: @order.name,
+         cash_register: @cash_register.name,
+         cashier: current_user&.name,
+         timestamp: Time.current.strftime("%d.%m.%Y %H:%M"),
+         currency: "CHF",
+         payment_method: payment_method,
+         subtotal: total_gross.to_f.round(2),
+         total_discount: discount_amount.to_f.round(2),
+         voucher_amount: voucher_amount.to_f.round(2),
+         voucher_code: params[:voucher_code].to_s,
+         total_amount: to_pay,
+         amount_tendered: tendered.to_f.round(2),
+         change: change,
+         items: receipt_items
+       }
        
-      redirect_to pos_path(@cash_register), notice: notice_msg
+      respond_to do |format|
+        format.json do
+          flash[:notice] = notice_msg
+          render json: {
+            success: true,
+            result_code: 0,
+            result_message: notice_msg,
+            redirect_url: pos_path(@cash_register),
+            receipt_data: receipt_data
+          }, status: :ok
+        end
+        format.html { redirect_to pos_path(@cash_register), notice: notice_msg }
+      end
     else
-      redirect_to pos_path(@cash_register), alert: @error_message || "Checkout failed."
+      err_msg = @error_message || "Bezahlung fehlgeschlagen."
+      respond_to do |format|
+        format.json do
+          render json: {
+            success: false,
+            result_code: -1,
+            result_message: err_msg,
+            redirect_url: pos_path(@cash_register)
+          }, status: :unprocessable_entity
+        end
+        format.html { redirect_to pos_path(@cash_register), alert: err_msg }
+      end
+    end
+  end
+
+  def abort_payment
+    unless @cash_register.terminal_ip.present?
+      render json: {
+        success: false,
+        status: "error",
+        result_code: -1,
+        result_message: "Kein Kartenterminal für diese Kasse konfiguriert."
+      }, status: :unprocessable_entity
+      return
+    end
+
+    begin
+      result = TerminaloramaClient.abort(
+        ip: @cash_register.terminal_ip,
+        port: @cash_register.terminal_port
+      )
+      render json: {
+        success: true,
+        status: result["status"] || "ok",
+        overall_result: result["overall_result"] || "Success",
+        result_code: result["result_code"] || 0,
+        result_message: result["result_message"].presence || "Abbruchbefehl vom Terminal bestätigt"
+      }, status: :ok
+    rescue TerminaloramaClient::PaymentError => e
+      render json: {
+        success: false,
+        status: "error",
+        overall_result: e.overall_result || "Failure",
+        result_code: e.result_code || -1,
+        result_message: e.message
+      }, status: :unprocessable_entity
+    end
+  end
+
+  def print_receipt
+    unless @cash_register.printer_ip.present?
+      msg = "Kein Quittungsdrucker für diese Kasse konfiguriert."
+      respond_to do |format|
+        format.json do
+          render json: {
+            success: false,
+            status: "error",
+            result_message: msg
+          }, status: :unprocessable_entity
+        end
+        format.html { redirect_back fallback_location: transactions_cash_register_path(@cash_register), alert: msg }
+      end
+      return
+    end
+
+    raw_receipt = params[:receipt_data]
+    receipt_payload = if raw_receipt.respond_to?(:to_unsafe_h)
+                        raw_receipt.to_unsafe_h
+                      elsif raw_receipt.is_a?(Hash)
+                        raw_receipt
+                      elsif params[:order_id].present?
+                        order = @cash_register.orders.find_by(id: params[:order_id])
+                        order ? build_receipt_data_for_order(order) : {}
+                      else
+                        {}
+                      end
+
+    begin
+      result = PrinterClient.print(
+        ip: @cash_register.printer_ip,
+        port: @cash_register.printer_port,
+        receipt_data: receipt_payload
+      )
+      ok_msg = result["result_message"].presence || "Quittung erfolgreich gedruckt"
+      respond_to do |format|
+        format.json do
+          render json: {
+            success: true,
+            status: result["status"] || "printed",
+            result_message: ok_msg
+          }, status: :ok
+        end
+        format.html { redirect_back fallback_location: transactions_cash_register_path(@cash_register), notice: ok_msg }
+      end
+    rescue PrinterClient::PrintError => e
+      respond_to do |format|
+        format.json do
+          render json: {
+            success: false,
+            status: "error",
+            result_message: e.message
+          }, status: :unprocessable_entity
+        end
+        format.html { redirect_back fallback_location: transactions_cash_register_path(@cash_register), alert: e.message }
+      end
     end
   end
 
@@ -336,7 +527,7 @@ class PosController < ApplicationController
                       pos_path(@cash_register, section_id: params[:section_id])
                     end
     
-    redirect_to redirect_path, notice: "Added #{@article.name} at #{helpers.number_to_currency(price)}"
+    redirect_to redirect_path, notice: "#{@article.name} für #{helpers.number_to_currency(price)} hinzugefügt"
   end
 
   def withdraw_cash
@@ -348,7 +539,7 @@ class PosController < ApplicationController
     reason = params[:reason]
 
     if amount <= 0
-      redirect_to withdraw_cash_pos_path(@cash_register), alert: "Please enter a valid amount greater than 0."
+      redirect_to withdraw_cash_pos_path(@cash_register), alert: "Bitte geben Sie einen gültigen Betrag grösser als 0 ein."
       return
     end
 
@@ -357,7 +548,7 @@ class PosController < ApplicationController
       target_register = CashRegister.find(params[:target_register_id])
       
       if amount > (@cash_register.amount || 0)
-        redirect_to withdraw_cash_pos_path(@cash_register), alert: "Cannot transfer more than current balance."
+        redirect_to withdraw_cash_pos_path(@cash_register), alert: "Es kann nicht mehr als der aktuelle Kassenbestand übertragen werden."
         return
       end
       
@@ -376,7 +567,7 @@ class PosController < ApplicationController
           cash_register: @cash_register,
           transaction_type: 'transfer to',
           amount: amount,
-          description: "Transfer to #{target_register.name}",
+          description: "Transfer nach #{target_register.name}",
           user_name: current_user.name
         )
         
@@ -385,18 +576,19 @@ class PosController < ApplicationController
           cash_register: target_register,
           transaction_type: 'transfer from',
           amount: amount,
-          description: "Transfer from #{@cash_register.name}",
+          description: "Transfer von #{@cash_register.name}",
           user_name: current_user.name
         )
       end
       
-      redirect_to pos_path(@cash_register), notice: "Successfully transferred #{helpers.number_to_currency(amount)} to #{target_register.name}."
+      PrinterClient.try_open_drawer(@cash_register)
+      redirect_to pos_path(@cash_register), notice: "#{helpers.number_to_currency(amount)} erfolgreich an #{target_register.name} übertragen."
       return
     end
     
     current_amount = @cash_register.amount || 0
     if amount > current_amount
-      redirect_to withdraw_cash_pos_path(@cash_register), alert: "Cannot withdraw more than current balance (#{helpers.number_to_currency(current_amount)})."
+      redirect_to withdraw_cash_pos_path(@cash_register), alert: "Es kann nicht mehr als der aktuelle Kassenbestand (#{helpers.number_to_currency(current_amount)}) entnommen werden."
       return
     end
 
@@ -447,34 +639,35 @@ class PosController < ApplicationController
        end
     end
     
-    redirect_to pos_path(@cash_register), notice: "Successfully withdrew #{helpers.number_to_currency(amount)}."
+    PrinterClient.try_open_drawer(@cash_register)
+    redirect_to pos_path(@cash_register), notice: "#{helpers.number_to_currency(amount)} erfolgreich entnommen."
   end
 
   def park_order
     name = params[:name].presence || "#{ @cash_register.name } - #{ Time.current.strftime('%d.%m.%Y %H:%M') }"
     
     if @order.order_items.empty?
-       redirect_to pos_path(@cash_register), alert: "Cannot park empty order."
+       redirect_to pos_path(@cash_register), alert: "Leere Bestellung kann nicht parkiert werden."
        return
     end
 
     @order.update!(status: 'parked', name: name)
     
-    redirect_to pos_path(@cash_register), notice: "Order parked as '#{name}'"
+    redirect_to pos_path(@cash_register), notice: "Bestellung als '#{name}' parkiert"
   end
 
   def restore_order
     order_to_restore = @cash_register.orders.parked.find(params[:order_id])
     
     if @order.order_items.any?
-       redirect_to pos_path(@cash_register), alert: "Current order is not empty. Please clear or park it first."
+       redirect_to pos_path(@cash_register), alert: "Aktuelle Bestellung ist nicht leer. Bitte zuerst leeren oder parkieren."
        return
     end
 
     @order.destroy if @order.persisted?
     order_to_restore.update!(status: 'pending')
     
-    redirect_to pos_path(@cash_register), notice: "Order '#{order_to_restore.name}' restored."
+    redirect_to pos_path(@cash_register), notice: "Bestellung '#{order_to_restore.name}' wiederhergestellt."
   end
 
   def update_item_discount
@@ -508,7 +701,7 @@ class PosController < ApplicationController
      @item.net_price = net_price
      @item.save!
      
-     redirect_to pos_path(@cash_register, section_id: params[:section_id]), notice: "Discount updated for #{@item.article.name}"
+     redirect_to pos_path(@cash_register, section_id: params[:section_id]), notice: "Rabatt für #{@item.article.name} aktualisiert"
   end
 
   private
@@ -523,7 +716,7 @@ class PosController < ApplicationController
       @item.discount = 0
       @item.net_price = @item.gross_price
       @item.save!
-      flash[:notice] = "Added #{variant.name}"
+      flash[:notice] = "#{variant.name} hinzugefügt"
       redirect_to pos_path(@cash_register, section_id: params[:section_id])
     end
 
@@ -533,5 +726,54 @@ class PosController < ApplicationController
 
     def set_current_order
       @order = @cash_register.orders.pending.first_or_create
+    end
+
+    def build_receipt_data_for_order(order)
+      items = order.order_items.includes({ article: :tax_code }, :variant).map do |item|
+        gross = (item.gross_price || (item.quantity * item.unit_price)).to_f.round(2)
+        disc = item.discount.to_f.round(2)
+        net = (item.net_price || (gross - disc)).to_f.round(2)
+        {
+          name: item.article.name,
+          variant: item.variant&.name,
+          quantity: item.quantity,
+          unit_price: item.unit_price.to_f.round(2),
+          gross_price: gross,
+          discount: disc,
+          total_amount: net,
+          tax_code: item.article.tax_code&.rate.to_f
+        }
+      end
+
+      subtotal = items.sum { |i| i[:gross_price] }.round(2)
+      total_discount = (order.discount || items.sum { |i| i[:discount] }).to_f.round(2)
+
+      voucher_amount = order.voucher_amount
+      if voucher_amount <= 0
+        voucher_amount = Entry.where(debit_account: '2215').where("reference_number LIKE ?", "#{order.id}/%").sum(:amount).to_f.round(2)
+      end
+      voucher_code = order.voucher_code
+
+      net_total = (order.total_amount || items.sum { |i| i[:total_amount] }).to_f.round(2)
+      to_pay = [net_total - voucher_amount, 0.0].max.round(2)
+      ts = (order.updated_at || order.created_at || Time.current).strftime("%d.%m.%Y %H:%M")
+
+      {
+        order_id: order.id,
+        order_name: order.name,
+        cash_register: @cash_register.name,
+        cashier: order.user_name.presence || current_user&.name,
+        timestamp: ts,
+        currency: "CHF",
+        payment_method: order.payment_method.presence || "cash",
+        subtotal: subtotal,
+        total_discount: total_discount,
+        voucher_amount: voucher_amount,
+        voucher_code: voucher_code,
+        total_amount: to_pay,
+        amount_tendered: to_pay,
+        change: 0.0,
+        items: items
+      }
     end
 end

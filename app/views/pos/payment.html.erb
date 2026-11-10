@@ -50,21 +50,85 @@
           </table>
        </div>
        <div class="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between items-center">
-           <span class="font-bold text-gray-600">Total Items:</span>
+           <span class="font-bold text-gray-600">Artikel gesamt:</span>
            <span class="font-bold text-gray-900"><%= @order_items.sum(&:quantity) %></span>
        </div>
      </div>
   </div>
 
   <!-- Right Column: Payment Controls -->
-  <div class="w-7/12 flex flex-col items-center justify-start pt-12">
+  <div class="w-7/12 flex flex-col items-center justify-start">
     <div class="bg-white shadow-lg rounded-2xl w-full max-w-2xl p-8 border border-gray-100">
+    <div id="pos-flash-container" class="fixed z-50 flex flex-col gap-2" style="top: 4.5rem; left: 1.25rem;">
+      <% if notice.present? %>
+        <div id="notice" class="py-3 px-5 bg-green-100 border border-green-400 text-green-800 font-medium rounded-full shadow-lg flex items-center gap-2 cursor-pointer" style="transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;" onclick="dismissPosFlash(this)">
+          <span><%= notice %></span>
+        </div>
+      <% end %>
+      <% if alert.present? %>
+        <div id="alert" class="py-3 px-5 bg-red-100 border border-red-400 text-red-800 font-medium rounded-full shadow-lg flex items-center gap-2 cursor-pointer" style="transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;" onclick="dismissPosFlash(this)">
+          <span><%= alert %></span>
+        </div>
+      <% end %>
+    </div>
+    <script>
+      function dismissPosFlash(el) {
+        if (!el || el.dataset.dismissing) return;
+        el.dataset.dismissing = "true";
+        el.style.transform = "translateX(-120%)";
+        el.style.opacity = "0";
+        setTimeout(() => {
+          el.remove();
+        }, 500);
+      }
+
+      function showPosFlash(message, type = "alert") {
+        let container = document.getElementById("pos-flash-container");
+        if (!container) {
+          container = document.createElement("div");
+          container.id = "pos-flash-container";
+          container.className = "fixed z-50 flex flex-col gap-2";
+          container.style.top = "4.5rem";
+          container.style.left = "1.25rem";
+          document.body.appendChild(container);
+        }
+
+        const existing = container.querySelector(`#${type}`);
+        if (existing) existing.remove();
+
+        const bubble = document.createElement("div");
+        bubble.id = type;
+        if (type === "notice") {
+          bubble.className = "py-3 px-5 bg-green-100 border border-green-400 text-green-800 font-medium rounded-full shadow-lg flex items-center gap-2 cursor-pointer";
+        } else {
+          bubble.className = "py-3 px-5 bg-red-100 border border-red-400 text-red-800 font-medium rounded-full shadow-lg flex items-center gap-2 cursor-pointer";
+        }
+        bubble.style.transition = "transform 0.5s ease-in-out, opacity 0.5s ease-in-out";
+        bubble.onclick = function() { dismissPosFlash(this); };
+
+        const span = document.createElement("span");
+        span.textContent = message;
+        bubble.appendChild(span);
+        container.appendChild(bubble);
+
+        setTimeout(() => dismissPosFlash(bubble), 5000);
+      }
+
+      (() => {
+        const container = document.getElementById("pos-flash-container");
+        if (!container) return;
+        const bubbles = container.querySelectorAll("#notice, #alert");
+        bubbles.forEach((bubble) => {
+          setTimeout(() => dismissPosFlash(bubble), 5000);
+        });
+      })();
+    </script>
     <h1 class="text-3xl font-bold text-[#2C2C2C] mb-8 text-center">Bezahlung</h1>
 
     <div class="space-y-6">
       <!-- Total Display -->
       <div class="flex justify-between items-end border-b pb-4">
-        <span class="text-gray-500 font-medium text-lg">Subtotal</span>
+        <span class="text-gray-500 font-medium text-lg">Zwischensumme</span>
         <span class="text-3xl font-bold text-gray-800" id="subtotal_display" data-value="<%= @total %>"><%= number_to_currency(@total, unit: '') %></span>
       </div>
 
@@ -105,7 +169,7 @@
       <div id="discount_code_section" class="bg-gray-50 p-4 rounded-lg hidden transition-all duration-300 mt-2">
          <label class="block text-sm font-medium text-gray-700 mb-1">Gutschein Betrag</label>
          <div class="flex gap-2">
-             <input type="number" id="voucher_input" placeholder="Amount..." class="focus:ring-[#FFD100] focus:border-[#FFD100] block w-full sm:text-sm border-gray-300 rounded-md p-2">
+             <input type="number" id="voucher_input" placeholder="Betrag..." class="focus:ring-[#FFD100] focus:border-[#FFD100] block w-full sm:text-sm border-gray-300 rounded-md p-2">
              <button type="button" onclick="redeemVoucher()" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-gray-700 font-bold">Einlösen</button>
          </div>
       </div>
@@ -175,7 +239,7 @@
                     <span id="change_display">0.00</span>
                  </div>
               </div>
-              <button type="button" onclick="submitPayment('cash')" class="w-full mt-4 bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] font-bold py-3 rounded-lg shadow">Bar bezahlen</button>
+              <button type="button" id="cash_pay_btn" onclick="submitPayment('cash')" class="w-full mt-4 bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] font-bold py-3 rounded-lg shadow">Bar bezahlen</button>
            </div>
 
            <!-- Kartenzahlung -->
@@ -187,14 +251,73 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
                      </svg>
                   </div>
+                  <% if @cash_register.terminal_ip.present? %>
+                     <div class="text-xs text-blue-600 text-center mt-2">
+                        Terminal: <%= @cash_register.terminal_ip %>:<%= @cash_register.terminal_port || 4100 %>
+                     </div>
+                  <% end %>
                </div>
-               <button type="button" onclick="submitPayment('card')" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow">Karte bezahlen</button>
+               <button type="button" id="card_pay_btn" onclick="submitPayment('card')" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow">Karte bezahlen</button>
            </div>
         </div>
       <% end %>
       
 
     </div>
+    </div>
+  </div>
+</div>
+
+<!-- Credit Card Transaction Dialog -->
+<div id="card-payment-modal" class="hidden fixed inset-0 w-full h-full z-[9999] grid place-items-center" style="background-color: rgba(75, 85, 99, 0.5);">
+  <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 text-center">
+    <div class="mx-auto mb-4 flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-9 h-9 animate-pulse">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+      </svg>
+    </div>
+
+    <h3 id="card-payment-modal-message" class="text-xl font-bold text-gray-800 mb-4">Kreditkarten Terminal - in Bearbeitung</h3>
+
+    <div class="my-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+      <div class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Betrag</div>
+      <div class="text-4xl font-bold text-[#2C2C2C]">
+        CHF <span id="card-payment-modal-amount"><%= number_to_currency(@total, unit: '') %></span>
+      </div>
+    </div>
+
+    <button type="button" id="card-payment-abort-btn" onclick="abortCardPayment()" class="w-full py-3 px-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg shadow transition">
+      Abbruch
+    </button>
+  </div>
+</div>
+
+<!-- Print Receipt Dialog (Quittung Drucken) -->
+<div id="print-receipt-modal" class="hidden fixed inset-0 w-full h-full z-[9999] grid place-items-center" style="background-color: rgba(75, 85, 99, 0.5);">
+  <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 text-center">
+    <div class="mx-auto mb-4 flex items-center justify-center w-16 h-16 rounded-full bg-green-50 text-green-600">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-9 h-9">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" />
+      </svg>
+    </div>
+
+    <h3 class="text-2xl font-bold text-gray-800 mb-2">Quittung Drucken</h3>
+    <p id="print-receipt-summary" class="text-sm text-gray-500 mb-4">Transaktion erfolgreich abgeschlossen.</p>
+
+    <div class="mb-6">
+      <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div id="print-receipt-progress" class="bg-[#FFD100] h-2 transition-all duration-1000 ease-linear" style="width: 100%;"></div>
+      </div>
+      <div class="text-xs text-gray-400 mt-1">Schliesst automatisch in <span id="print-receipt-countdown">5</span>s</div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <button type="button" id="print-receipt-cancel-btn" onclick="cancelPrintReceipt()" class="w-full py-3 px-6 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg transition">
+        Abbrechen
+      </button>
+      <button type="button" id="print-receipt-confirm-btn" onclick="confirmPrintReceipt()" class="w-full py-3 px-6 bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] font-bold rounded-lg shadow transition">
+        Drucken
+      </button>
     </div>
   </div>
 </div>
@@ -219,6 +342,185 @@
   const hiddenAmountTendered = document.getElementById('hidden_amount_tendered');
   
   const paymentForm = document.getElementById('payment_form');
+  const cardModal = document.getElementById('card-payment-modal');
+  const cardModalAmount = document.getElementById('card-payment-modal-amount');
+  const cardAbortBtn = document.getElementById('card-payment-abort-btn');
+  const cardPayBtn = document.getElementById('card_pay_btn');
+  const cashPayBtn = document.getElementById('cash_pay_btn');
+
+  const printModal = document.getElementById('print-receipt-modal');
+  const printSummary = document.getElementById('print-receipt-summary');
+  const printCountdown = document.getElementById('print-receipt-countdown');
+  const printProgress = document.getElementById('print-receipt-progress');
+  const printConfirmBtn = document.getElementById('print-receipt-confirm-btn');
+  const printCancelBtn = document.getElementById('print-receipt-cancel-btn');
+
+  let abortRequested = false;
+  let abortInFlight = false;
+  let cardTxActive = false;
+  let cashTxActive = false;
+
+  let pendingReceiptData = null;
+  let pendingRedirectUrl = "<%= pos_path(@cash_register) %>";
+  let printTimeoutId = null;
+  let printIntervalId = null;
+  let printInFlight = false;
+
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+  }
+
+  function openCardPaymentModal(amount) {
+    if (cardModalAmount) {
+      cardModalAmount.textContent = amount.toFixed(2);
+    }
+    if (cardAbortBtn) {
+      cardAbortBtn.disabled = false;
+      cardAbortBtn.textContent = 'Abbruch';
+      cardAbortBtn.classList.remove('opacity-75', 'cursor-wait');
+    }
+    if (cardModal) {
+      cardModal.classList.remove('hidden');
+    }
+  }
+
+  function closeCardPaymentModal() {
+    if (cardModal) {
+      cardModal.classList.add('hidden');
+    }
+    if (cardPayBtn) {
+      cardPayBtn.disabled = false;
+      cardPayBtn.textContent = 'Karte bezahlen';
+      cardPayBtn.classList.remove('opacity-75', 'cursor-wait');
+    }
+  }
+
+  function clearPrintTimers() {
+    if (printTimeoutId) {
+      clearTimeout(printTimeoutId);
+      printTimeoutId = null;
+    }
+    if (printIntervalId) {
+      clearInterval(printIntervalId);
+      printIntervalId = null;
+    }
+  }
+
+  function closePrintReceiptModal() {
+    clearPrintTimers();
+    if (printModal) {
+      printModal.classList.add('hidden');
+    }
+  }
+
+  function openPrintReceiptModal(receiptData, redirectUrl, resultMessage) {
+    pendingReceiptData = receiptData || null;
+    pendingRedirectUrl = redirectUrl || "<%= pos_path(@cash_register) %>";
+    printInFlight = false;
+
+    if (printSummary) {
+      printSummary.textContent = resultMessage || 'Transaktion erfolgreich abgeschlossen.';
+    }
+    if (printConfirmBtn) {
+      printConfirmBtn.disabled = false;
+      printConfirmBtn.textContent = 'Drucken';
+      printConfirmBtn.classList.remove('opacity-75', 'cursor-wait');
+    }
+    if (printCancelBtn) {
+      printCancelBtn.disabled = false;
+    }
+
+    let remainingSeconds = 5;
+    if (printCountdown) printCountdown.textContent = String(remainingSeconds);
+    if (printProgress) {
+      printProgress.style.transition = 'none';
+      printProgress.style.width = '100%';
+    }
+
+    if (printModal) {
+      printModal.classList.remove('hidden');
+    }
+
+    // Trigger smooth progress bar shrink
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (printProgress) {
+          printProgress.style.transition = 'width 5s linear';
+          printProgress.style.width = '0%';
+        }
+      });
+    });
+
+    clearPrintTimers();
+    printIntervalId = setInterval(() => {
+      remainingSeconds = Math.max(0, remainingSeconds - 1);
+      if (printCountdown) printCountdown.textContent = String(remainingSeconds);
+    }, 1000);
+
+    printTimeoutId = setTimeout(() => {
+      closePrintReceiptModal();
+      window.location.href = pendingRedirectUrl;
+    }, 5000);
+  }
+
+  window.cancelPrintReceipt = function() {
+    if (printInFlight) return;
+    closePrintReceiptModal();
+    window.location.href = pendingRedirectUrl;
+  };
+
+  window.confirmPrintReceipt = function() {
+    if (printInFlight) return;
+    printInFlight = true;
+    clearPrintTimers();
+
+    if (printConfirmBtn) {
+      printConfirmBtn.disabled = true;
+      printConfirmBtn.textContent = 'Drucke...';
+      printConfirmBtn.classList.add('opacity-75', 'cursor-wait');
+    }
+    if (printCancelBtn) {
+      printCancelBtn.disabled = true;
+    }
+
+    fetch("<%= print_receipt_pos_path(@cash_register) %>", {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': getCsrfToken()
+      },
+      body: JSON.stringify({ receipt_data: pendingReceiptData || {} }),
+      credentials: 'same-origin'
+    })
+    .then(async (response) => {
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (_) {}
+      return { ok: response.ok, data };
+    })
+    .then(({ ok, data }) => {
+      closePrintReceiptModal();
+      if (!ok || !data.success) {
+        const errMsg = data.result_message || 'Druckfehler beim Quittungsdruck.';
+        showPosFlash(errMsg, 'alert');
+        setTimeout(() => {
+          window.location.href = pendingRedirectUrl;
+        }, 2000);
+        return;
+      }
+      window.location.href = pendingRedirectUrl;
+    })
+    .catch((err) => {
+      closePrintReceiptModal();
+      showPosFlash('Drucker-Verbindungsfehler: ' + err.message, 'alert');
+      setTimeout(() => {
+        window.location.href = pendingRedirectUrl;
+      }, 2000);
+    });
+  };
 
   function calculate() {
     let discVal = 0;
@@ -319,7 +621,152 @@
       }
       
       hiddenPaymentMethod.value = method;
-      paymentForm.submit();
+      if (method === 'card') {
+          if (cardTxActive) return;
+          cardTxActive = true;
+          abortRequested = false;
+          abortInFlight = false;
+
+          if (cardPayBtn) {
+              cardPayBtn.disabled = true;
+              cardPayBtn.textContent = 'Warte auf Kartenterminal...';
+              cardPayBtn.classList.add('opacity-75', 'cursor-wait');
+          }
+
+          openCardPaymentModal(currentTotal);
+
+          const formData = new FormData(paymentForm);
+          fetch(paymentForm.action, {
+              method: 'POST',
+              headers: {
+                  'Accept': 'application/json',
+                  'X-CSRF-Token': getCsrfToken()
+              },
+              body: formData,
+              credentials: 'same-origin'
+          })
+          .then(async (response) => {
+              let data = {};
+              try {
+                  data = await response.json();
+              } catch (_) {}
+              return { ok: response.ok, status: response.status, data };
+          })
+          .then(({ ok, data }) => {
+              cardTxActive = false;
+              // If the user pressed Abbruch, wait for the abort response instead of closing early
+              if (abortRequested) {
+                  if (ok && data.success) {
+                      closeCardPaymentModal();
+                      window.location.href = data.redirect_url || "<%= pos_path(@cash_register) %>";
+                  }
+                  return;
+              }
+
+              closeCardPaymentModal();
+              if (ok && data.success) {
+                  openPrintReceiptModal(data.receipt_data, data.redirect_url || "<%= pos_path(@cash_register) %>", data.result_message);
+              } else {
+                  const errMsg = data.result_message || "Kartenzahlung fehlgeschlagen.";
+                  showPosFlash(errMsg, "alert");
+              }
+          })
+          .catch((err) => {
+              cardTxActive = false;
+              if (abortRequested) return;
+              closeCardPaymentModal();
+              showPosFlash("Verbindungsfehler: " + err.message, "alert");
+          });
+          return;
+      }
+
+      if (cashTxActive) return;
+      cashTxActive = true;
+      if (cashPayBtn) {
+          cashPayBtn.disabled = true;
+          cashPayBtn.classList.add('opacity-75', 'cursor-wait');
+      }
+
+      const formData = new FormData(paymentForm);
+      fetch(paymentForm.action, {
+          method: 'POST',
+          headers: {
+              'Accept': 'application/json',
+              'X-CSRF-Token': getCsrfToken()
+          },
+          body: formData,
+          credentials: 'same-origin'
+      })
+      .then(async (response) => {
+          let data = {};
+          try {
+              data = await response.json();
+          } catch (_) {}
+          return { ok: response.ok, status: response.status, data };
+      })
+      .then(({ ok, data }) => {
+          cashTxActive = false;
+          if (cashPayBtn) {
+              cashPayBtn.disabled = false;
+              cashPayBtn.classList.remove('opacity-75', 'cursor-wait');
+          }
+          if (ok && data.success) {
+              openPrintReceiptModal(data.receipt_data, data.redirect_url || "<%= pos_path(@cash_register) %>", data.result_message);
+          } else {
+              const errMsg = data.result_message || "Barzahlung fehlgeschlagen.";
+              showPosFlash(errMsg, "alert");
+          }
+      })
+      .catch((err) => {
+          cashTxActive = false;
+          if (cashPayBtn) {
+              cashPayBtn.disabled = false;
+              cashPayBtn.classList.remove('opacity-75', 'cursor-wait');
+          }
+          showPosFlash("Verbindungsfehler: " + err.message, "alert");
+      });
+  }
+
+  window.abortCardPayment = function() {
+      if (abortInFlight) return;
+      abortRequested = true;
+      abortInFlight = true;
+
+      if (cardAbortBtn) {
+          cardAbortBtn.disabled = true;
+          cardAbortBtn.classList.add('opacity-75', 'cursor-wait');
+      }
+
+      fetch("<%= abort_payment_pos_path(@cash_register) %>", {
+          method: 'POST',
+          headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': getCsrfToken()
+          },
+          body: JSON.stringify({}),
+          credentials: 'same-origin'
+      })
+      .then(async (response) => {
+          let data = {};
+          try {
+              data = await response.json();
+          } catch (_) {}
+          return { ok: response.ok, status: response.status, data };
+      })
+      .then(({ data }) => {
+          abortInFlight = false;
+          cardTxActive = false;
+          closeCardPaymentModal();
+          const msg = data.result_message || "Transaktion abgebrochen.";
+          showPosFlash(msg, "alert");
+      })
+      .catch((err) => {
+          abortInFlight = false;
+          cardTxActive = false;
+          closeCardPaymentModal();
+          showPosFlash("Fehler beim Abbruch: " + err.message, "alert");
+      });
   }
   
   window.selectPayment = function(method) {

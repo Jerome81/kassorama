@@ -25,7 +25,7 @@ class TaxCodesController < ApplicationController
 
     respond_to do |format|
       if @tax_code.save
-        format.html { redirect_to @tax_code, notice: "Tax code was successfully created." }
+        format.html { redirect_to @tax_code, notice: "MWSt-Code wurde erfolgreich erstellt." }
         format.json { render :show, status: :created, location: @tax_code }
       else
         format.html { render :new, status: :unprocessable_entity }
@@ -38,7 +38,7 @@ class TaxCodesController < ApplicationController
   def update
     respond_to do |format|
       if @tax_code.update(tax_code_params)
-        format.html { redirect_to @tax_code, notice: "Tax code was successfully updated.", status: :see_other }
+        format.html { redirect_to @tax_code, notice: "MWSt-Code wurde erfolgreich aktualisiert.", status: :see_other }
         format.json { render :show, status: :ok, location: @tax_code }
       else
         format.html { render :edit, status: :unprocessable_entity }
@@ -52,7 +52,7 @@ class TaxCodesController < ApplicationController
     @tax_code.destroy!
 
     respond_to do |format|
-      format.html { redirect_to tax_codes_path, notice: "Tax code was successfully destroyed.", status: :see_other }
+      format.html { redirect_to tax_codes_path, notice: "MWSt-Code wurde erfolgreich gelöscht.", status: :see_other }
       format.json { head :no_content }
     end
   end

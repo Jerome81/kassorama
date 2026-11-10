@@ -8,14 +8,14 @@
 
   <div class="mt-2 flex justify-between items-center">
     <% if f.object.persisted? %>
-      <%= link_to "Manage Content (Add Articles)", edit_section_path(f.object), class: "text-sm text-blue-600 hover:text-[#FFD100] font-medium" %>
+      <%= link_to "Inhalt verwalten (Artikel hinzufügen)", edit_section_path(f.object), class: "text-sm text-blue-600 hover:text-[#FFD100] font-medium" %>
     <% else %>
-      <span class="text-sm text-gray-400">Save to manage content</span>
+      <span class="text-sm text-gray-400">Speichern, um Inhalt zu verwalten</span>
     <% end %>
     
     <div>
       <%= f.check_box :_destroy, class: "rounded border-gray-300 text-red-600 focus:ring-red-500" %>
-      <%= f.label :_destroy, "Remove Section", class: "text-red-600 font-medium" %>
+      <%= f.label :_destroy, "Bereich entfernen", class: "text-red-600 font-medium" %>
     </div>
   </div>
 </div>

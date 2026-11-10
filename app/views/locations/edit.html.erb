@@ -1,13 +1,13 @@
-<% content_for :title, "Editing location" %>
+<% content_for :title, "Lagerort bearbeiten" %>
 
 <div class="md:w-2/3 w-full">
-  <h1 class="font-bold text-4xl">Editing location</h1>
+  <h1 class="font-bold text-4xl">Lagerort bearbeiten</h1>
 
   <%= render "form", location: @location %>
 
   <div class="flex items-center gap-2 mt-4">
-    <%= link_to "Show this location", @location, class: "rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
-    <%= link_to "Back to locations", locations_path, class: "rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+    <%= link_to "Lagerort anzeigen", @location, class: "rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+    <%= link_to "Zurück zu Lagerorten", locations_path, class: "rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
     
     <div class="flex-grow"></div>
     
@@ -15,11 +15,11 @@
     <% if has_stock %>
       <div class="relative group inline-block" title="Kann nicht gelöscht werden, da noch Artikel an Lager">
          <button disabled class="rounded-md px-3.5 py-2.5 bg-red-100 text-red-300 font-medium cursor-not-allowed">
-            Delete Location
+            Lagerort löschen
          </button>
       </div>
     <% else %>
-      <%= button_to "Delete Location", @location, method: :delete, class: "rounded-md px-3.5 py-2.5 bg-red-100 hover:bg-red-200 text-red-600 font-medium cursor-pointer" %>
+      <%= button_to "Lagerort löschen", @location, method: :delete, class: "rounded-md px-3.5 py-2.5 bg-red-100 hover:bg-red-200 text-red-600 font-medium cursor-pointer" %>
     <% end %>
   </div>
 </div>

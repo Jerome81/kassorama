@@ -111,7 +111,7 @@ class BexioService
         credit_id = find_account_id_by_number(line[:credit_account])
         
         unless debit_id && credit_id
-            raise "Could not find Bexio Account ID for #{line[:debit_account]} or #{line[:credit_account]}"
+            raise "Bexio-Konto-ID für #{line[:debit_account]} oder #{line[:credit_account]} konnte nicht gefunden werden"
         end
         
         # Look up Tax ID
@@ -153,7 +153,7 @@ class BexioService
         if response.code.to_i >= 200 && response.code.to_i < 300
             JSON.parse(response.body)
         else
-            raise "Bexio API Error: #{response.body}"
+            raise "Bexio-API-Fehler: #{response.body}"
         end
     end
 
@@ -168,7 +168,7 @@ class BexioService
     if response.code.to_i == 200
         JSON.parse(response.body)
     else
-        raise "Failed to fetch Bexio accounts: #{response.code} - #{response.body}"
+        raise "Bexio-Konten konnten nicht geladen werden: #{response.code} - #{response.body}"
     end
   end
 
@@ -180,7 +180,7 @@ class BexioService
     if response.code.to_i == 200
       JSON.parse(response.body)
     else
-      raise "Failed to fetch Bexio taxes: #{response.code} - #{response.body}"
+      raise "Bexio-Steuercodes konnten nicht geladen werden: #{response.code} - #{response.body}"
     end
   end
 
@@ -203,7 +203,7 @@ class BexioService
     # For now, just rely on try/catch logic or explicit refresh if needed.
     # Ideally, we check simplistic validity or just refresh if missing.
     unless Setting[:bexio_access_token]
-        raise "No access token. Please authenticate first."
+        raise "Kein Zugriffstoken vorhanden. Bitte authentifizieren Sie sich zuerst."
     end
   end
 

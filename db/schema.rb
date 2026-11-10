@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_01_15_212859) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_10_115500) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -102,6 +102,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_01_15_212859) do
     t.integer "stock_location_id"
     t.decimal "amount", precision: 10, scale: 2, default: "0.0"
     t.string "precreated_tabs"
+    t.string "terminal_ip"
+    t.integer "terminal_port", default: 20007
+    t.string "printer_ip"
+    t.integer "printer_port", default: 8081
     t.index ["stock_location_id"], name: "index_cash_registers_on_stock_location_id"
   end
 

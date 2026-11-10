@@ -1,17 +1,17 @@
 <div class="nested-fields border border-gray-200 rounded p-4 mb-4 bg-gray-50 relative">
   <div class="grid grid-cols-2 gap-4">
     <div>
-      <%= f.label :name, class: "block font-medium text-gray-700" %>
+      <%= f.label :name, "Name", class: "block font-medium text-gray-700" %>
       <%= f.text_field :name, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
     </div>
     
     <div>
-      <%= f.label :barcode, class: "block font-medium text-gray-700" %>
+      <%= f.label :barcode, "Barcode", class: "block font-medium text-gray-700" %>
       <%= f.text_field :barcode, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
     </div>
 
     <div>
-      <%= f.label :price, class: "block font-medium text-gray-700" %>
+      <%= f.label :price, "Preis", class: "block font-medium text-gray-700" %>
       <%= f.number_field :price, step: 0.01, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
     </div>
     
@@ -29,7 +29,7 @@
   <div class="mt-4 flex justify-end">
     <div>
       <%= f.check_box :_destroy, class: "rounded border-gray-300 text-red-600 focus:ring-red-500" %>
-      <%= f.label :_destroy, "Remove Variant", class: "text-red-600 font-medium ml-1" %>
+      <%= f.label :_destroy, "Variante entfernen", class: "text-red-600 font-medium ml-1" %>
     </div>
   </div>
 </div>

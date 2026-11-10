@@ -69,6 +69,8 @@ Rails.application.routes.draw do
       post :checkout
       get :payment
       post :process_payment
+      post :abort_payment
+      post :print_receipt
       get :add_free_price_item
       post :save_free_price_item
       get :withdraw_cash

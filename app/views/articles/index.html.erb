@@ -4,8 +4,8 @@
   <% end %>
 
   <div class="flex justify-between items-center mb-8">
-    <h1 class="font-bold text-4xl text-[#2C2C2C]">Articles</h1>
-    <%= link_to "New article", new_article_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold hover:bg-yellow-400 transition" %>
+    <h1 class="font-bold text-4xl text-[#2C2C2C]">Artikel</h1>
+    <%= link_to "Neuer Artikel", new_article_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold hover:bg-yellow-400 transition" %>
   </div>
 
   <div class="overflow-x-auto shadow-md sm:rounded-lg">
@@ -13,12 +13,12 @@
       <thead class="text-xs text-white uppercase bg-[#2C2C2C]">
         <tr>
           <th scope="col" class="px-6 py-3">Name</th>
-          <th scope="col" class="px-6 py-3">SKU</th>
+          <th scope="col" class="px-6 py-3">Art.-Nr. (SKU)</th>
           <th scope="col" class="px-6 py-3">Barcode</th>
-          <th scope="col" class="px-6 py-3">Price</th>
-          <th scope="col" class="px-6 py-3">MWST</th>
+          <th scope="col" class="px-6 py-3">Preis</th>
+          <th scope="col" class="px-6 py-3">MWSt</th>
           <th scope="col" class="px-6 py-3">Status</th>
-          <th scope="col" class="px-6 py-3 text-right">Actions</th>
+          <th scope="col" class="px-6 py-3 text-right">Aktionen</th>
         </tr>
       </thead>
       <tbody>
@@ -41,12 +41,12 @@
             </td>
             <td class="px-6 py-4">
               <span class="<%= article.status == 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %> text-xs font-medium me-2 px-2.5 py-0.5 rounded border border-gray-200">
-                <%= article.status.capitalize %>
+                <%= article.status == 'active' ? 'Aktiv' : 'Inaktiv' %>
               </span>
             </td>
             <td class="px-6 py-4 text-right">
-              <%= link_to "Show", article, class: "font-medium text-[#2C2C2C] hover:text-[#FFD100] hover:underline mr-3" %>
-              <%= link_to "Edit", edit_article_path(article), class: "font-medium text-[#2C2C2C] hover:text-[#FFD100] hover:underline" %>
+              <%= link_to "Anzeigen", article, class: "font-medium text-[#2C2C2C] hover:text-[#FFD100] hover:underline mr-3" %>
+              <%= link_to "Bearbeiten", edit_article_path(article), class: "font-medium text-[#2C2C2C] hover:text-[#FFD100] hover:underline" %>
             </td>
           </tr>
         <% end %>

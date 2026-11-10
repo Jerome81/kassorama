@@ -16,7 +16,7 @@ class SuppliersController < ApplicationController
     @supplier = Supplier.new(supplier_params)
 
     if @supplier.save
-      redirect_to suppliers_path, notice: "Supplier was successfully created."
+      redirect_to suppliers_path, notice: "Lieferant wurde erfolgreich erstellt."
     else
       render :new, status: :unprocessable_entity
     end
@@ -24,7 +24,7 @@ class SuppliersController < ApplicationController
 
   def update
     if @supplier.update(supplier_params)
-      redirect_to suppliers_path, notice: "Supplier was successfully updated."
+      redirect_to suppliers_path, notice: "Lieferant wurde erfolgreich aktualisiert."
     else
       render :edit, status: :unprocessable_entity
     end
@@ -32,7 +32,7 @@ class SuppliersController < ApplicationController
 
   def destroy
     @supplier.destroy
-    redirect_to suppliers_path, notice: "Supplier was successfully destroyed.", status: :see_other
+    redirect_to suppliers_path, notice: "Lieferant wurde erfolgreich gelöscht.", status: :see_other
   end
 
   private

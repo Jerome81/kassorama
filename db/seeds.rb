@@ -20,8 +20,8 @@ showroom = Location.find_or_create_by!(name: "Showroom")
 register = CashRegister.find_or_create_by!(name: "Main Register", status: "active")
 
 # Create Sections for the register
-Section.find_or_create_by!(name: "Clothes", group_filter: "Apparel", cash_register: register)
-Section.find_or_create_by!(name: "General", group_filter: "General", cash_register: register)
+Section.find_or_create_by!(name: "Clothes", cash_register: register)
+Section.find_or_create_by!(name: "General", cash_register: register)
 
 if Article.count == 0
   tshirt = Article.create!(
@@ -31,7 +31,6 @@ if Article.count == 0
     price: 19.90,
     # mwst: 8.1, (Removed)
     tax_code: tax_high,
-    group: "Apparel",
     picture: "https://placehold.co/400x400?text=T-Shirt",
     status: "active"
   )
@@ -42,7 +41,6 @@ if Article.count == 0
     barcode: "87654321",
     price: 49.50,
     tax_code: tax_high,
-    group: "Apparel",
     picture: "https://placehold.co/400x400?text=Jeans",
     status: "active"
   )

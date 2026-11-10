@@ -32,7 +32,7 @@
             <% entries_on_day.each do |entry| %>
               <tr class="hover:bg-gray-50 group transition duration-150" data-entry-id="<%= entry.id %>">
                 <td class="p-1">
-                   <input type="date" name="booking_date" value="<%= entry.booking_date %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" title="Booking Date">
+                   <input type="date" name="booking_date" value="<%= entry.booking_date %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" title="Buchungsdatum">
                 </td>
                 <td class="p-1">
                    <input type="text" name="debit_account" value="<%= entry.debit_account %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Soll">
@@ -44,7 +44,7 @@
                    <input type="text" name="description" value="<%= entry.description %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Beschreibung">
                 </td>
                 <td class="p-1">
-                   <input type="text" name="tax_code" value="<%= entry.tax_code %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Tax">
+                   <input type="text" name="tax_code" value="<%= entry.tax_code %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Steuer">
                 </td>
                 <td class="p-1">
                    <input type="number" step="0.01" name="amount" value="<%= "%.2f" % (entry.amount || 0) %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-right font-mono font-bold text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="0.00">

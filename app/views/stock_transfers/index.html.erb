@@ -1,18 +1,49 @@
 <div class="w-full">
-  <div class="flex justify-between items-center mb-6">
+  <div class="flex flex-wrap justify-between items-end mb-6 gap-4">
     <h1 class="font-bold text-3xl text-[#2C2C2C]">Waren verschieben</h1>
-    <%= form_with url: stock_transfers_path, method: :get, class: "flex items-center" do |f| %>
-      <%= f.select :supplier_id, options_from_collection_for_select(@suppliers, :id, :name, @selected_supplier_id), { include_blank: "Alle Lieferanten" }, { onchange: "this.form.requestSubmit()", class: "block w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#FFD100] focus:border-[#FFD100] sm:text-sm rounded-md shadow-sm cursor-pointer border" } %>
+    <%= form_with url: stock_transfers_path, method: :get, id: "stock-transfer-filter-form", class: "flex flex-wrap items-end gap-4" do |f| %>
+      <% if @locations.size >= 2 %>
+        <div>
+          <%= f.label :source_location_id, "Verschieben von", class: "block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1" %>
+          <%= f.select :source_location_id,
+                options_from_collection_for_select(@locations, :id, :name, @source_location&.id),
+                {},
+                {
+                  id: "source_location_id",
+                  data: { prev_value: @source_location&.id },
+                  onchange: "handleLocationChange(this, 'target_location_id')",
+                  class: "block w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#FFD100] focus:border-[#FFD100] sm:text-sm rounded-md shadow-sm cursor-pointer border bg-white"
+                } %>
+        </div>
+
+        <div>
+          <%= f.label :target_location_id, "Nach", class: "block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1" %>
+          <%= f.select :target_location_id,
+                options_from_collection_for_select(@locations, :id, :name, @target_location&.id),
+                {},
+                {
+                  id: "target_location_id",
+                  data: { prev_value: @target_location&.id },
+                  onchange: "handleLocationChange(this, 'source_location_id')",
+                  class: "block w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#FFD100] focus:border-[#FFD100] sm:text-sm rounded-md shadow-sm cursor-pointer border bg-white"
+                } %>
+        </div>
+      <% end %>
+
+      <div>
+        <%= f.label :supplier_id, "Lieferant", class: "block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1" %>
+        <%= f.select :supplier_id, options_from_collection_for_select(@suppliers, :id, :name, @selected_supplier_id), { include_blank: "Alle Lieferanten" }, { onchange: "this.form.requestSubmit()", class: "block w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-[#FFD100] focus:border-[#FFD100] sm:text-sm rounded-md shadow-sm cursor-pointer border bg-white" } %>
+      </div>
     <% end %>
   </div>
 
   <% if @locations.empty? %>
     <div class="text-center p-12 bg-white rounded-lg shadow">
-       <p class="text-gray-500">No locations defined. Please create a location first.</p>
+       <p class="text-gray-500">Keine Lagerorte definiert. Bitte erstellen Sie zuerst einen Lagerort.</p>
     </div>
   <% else %>
     <div class="mb-12">
-      <h2 class="text-xl font-bold mb-4 text-[#2C2C2C]">Recommended Transfers</h2>
+      <h2 class="text-xl font-bold mb-4 text-[#2C2C2C]">Empfohlene Verschiebungen</h2>
       <div class="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
@@ -25,7 +56,7 @@
                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider <%= 'bg-yellow-50 text-yellow-800 border-x border-yellow-200' if @primary_location && location.id == @primary_location.id %>">
                      <%= location.name %>
                      <% if @primary_location && location.id == @primary_location.id %>
-                        <span class="block text-[10px] lowercase font-normal">(Primary)</span>
+                        <span class="block text-[10px] lowercase font-normal">(Hauptlager)</span>
                      <% end %>
                    </th>
                  <% end %>
@@ -53,7 +84,8 @@
                          primary_location: @primary_location, 
                          recent_sales: @recent_sales, 
                          recent_variant_sales: @recent_variant_sales, 
-                         other_locations: @other_locations, 
+                         source_location: @source_location, 
+                         target_location: @target_location, 
                          selected_supplier_id: @selected_supplier_id 
                        } %>
                  <% end %>
@@ -61,7 +93,7 @@
              </tbody>
           </table>
           <% if @grouped_recommended.empty? %>
-             <div class="p-8 text-center text-gray-500">No recommended transfers at this time.</div>
+             <div class="p-8 text-center text-gray-500">Derzeit keine empfohlenen Verschiebungen.</div>
           <% end %>
         </div>
       </div>
@@ -69,7 +101,7 @@
 
     <!-- All Articles Section -->
     <div>
-      <h2 class="text-xl font-bold mb-4 text-[#2C2C2C]">All Articles</h2>
+      <h2 class="text-xl font-bold mb-4 text-[#2C2C2C]">Alle Artikel</h2>
       <div class="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
@@ -82,7 +114,7 @@
                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider <%= 'bg-yellow-50 text-yellow-800 border-x border-yellow-200' if @primary_location && location.id == @primary_location.id %>">
                      <%= location.name %>
                      <% if @primary_location && location.id == @primary_location.id %>
-                        <span class="block text-[10px] lowercase font-normal">(Primary)</span>
+                        <span class="block text-[10px] lowercase font-normal">(Hauptlager)</span>
                      <% end %>
                    </th>
                  <% end %>
@@ -110,7 +142,8 @@
                          primary_location: @primary_location, 
                          recent_sales: @recent_sales, 
                          recent_variant_sales: @recent_variant_sales, 
-                         other_locations: @other_locations, 
+                         source_location: @source_location, 
+                         target_location: @target_location, 
                          selected_supplier_id: @selected_supplier_id 
                        } %>
                  <% end %>
@@ -122,3 +155,35 @@
     </div>
   <% end %>
 </div>
+
+<script>
+  function handleLocationChange(changedSelect, otherSelectId) {
+    const otherSelect = document.getElementById(otherSelectId);
+    if (otherSelect && changedSelect.value === otherSelect.value) {
+      const prevValue = changedSelect.dataset.prevValue;
+      if (prevValue && prevValue !== changedSelect.value) {
+        otherSelect.value = prevValue;
+      } else {
+        const alternative = Array.from(otherSelect.options).find(opt => opt.value !== changedSelect.value);
+        if (alternative) {
+          otherSelect.value = alternative.value;
+        }
+      }
+      otherSelect.dataset.prevValue = otherSelect.value;
+    }
+    changedSelect.dataset.prevValue = changedSelect.value;
+
+    const sourceSelect = document.getElementById('source_location_id');
+    const targetSelect = document.getElementById('target_location_id');
+    if (sourceSelect) {
+      document.querySelectorAll('.transfer-source-location-input').forEach(el => { el.value = sourceSelect.value; });
+    }
+    if (targetSelect) {
+      document.querySelectorAll('.transfer-target-location-input').forEach(el => { el.value = targetSelect.value; });
+    }
+
+    if (changedSelect.form) {
+      changedSelect.form.requestSubmit();
+    }
+  }
+</script>

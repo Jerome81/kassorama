@@ -1,6 +1,6 @@
 <div class="max-w-7xl mx-auto">
   <div class="flex justify-between items-center mb-6">
-    <h1 class="font-bold text-3xl text-[#2C2C2C]">Inventory: <%= @inventory.name %></h1>
+    <h1 class="font-bold text-3xl text-[#2C2C2C]">Inventar: <%= @inventory.name %></h1>
     <div class="space-x-2 flex items-center">
       <% if @inventory.completed_at.present? %>
          <span class="text-green-600 font-bold px-4 py-2 bg-green-50 rounded border border-green-200">Abgeschlossen (<%= @inventory.completed_at.strftime("%d.%m.%Y %H:%M") %>)</span>
@@ -8,9 +8,9 @@
          <%= button_to "Abgeschlossen", complete_inventory_path(@inventory), method: :post, class: "bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white font-bold cursor-pointer", form_class: "inline-block" %>
       <% end %>
 
-      <%= link_to "Edit Name", edit_inventory_path(@inventory), class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
-      <%= link_to "Back", inventories_path, class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
-      <%= link_to "PDF Report", report_inventory_path(@inventory), class: "bg-[#FFD100] hover:bg-yellow-400 px-4 py-2 rounded text-[#2C2C2C] font-bold cursor-pointer", target: "_blank" %>
+      <%= link_to "Name bearbeiten", edit_inventory_path(@inventory), class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
+      <%= link_to "Zurück", inventories_path, class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
+      <%= link_to "PDF-Bericht", report_inventory_path(@inventory), class: "bg-[#FFD100] hover:bg-yellow-400 px-4 py-2 rounded text-[#2C2C2C] font-bold cursor-pointer", target: "_blank" %>
     </div>
   </div>
 
@@ -22,7 +22,7 @@
     <table class="w-full text-sm text-left text-gray-500">
       <thead class="text-xs text-white uppercase bg-[#2C2C2C] sticky top-0">
         <tr>
-          <th scope="col" class="px-6 py-4 w-1/4">Article</th>
+          <th scope="col" class="px-6 py-4 w-1/4">Artikel</th>
           <% @locations.each do |location| %>
             <th scope="col" class="px-6 py-4 text-center"><%= location.name %></th>
           <% end %>
@@ -58,7 +58,7 @@
                   </span>
                 </div>
                 <% unless @inventory.completed_at.present? %>
-                  <div class="text-xs text-green-600 hidden saved-indicator opacity-0 transition-opacity duration-500 text-center">Saved</div>
+                  <div class="text-xs text-green-600 hidden saved-indicator opacity-0 transition-opacity duration-500 text-center">Gespeichert</div>
                 <% end %>
               </td>
             <% end %>
@@ -95,7 +95,7 @@
                          </span>
                        </div>
                        <% unless @inventory.completed_at.present? %>
-                         <div class="text-xs text-green-600 hidden saved-indicator opacity-0 transition-opacity duration-500 text-center">Saved</div>
+                         <div class="text-xs text-green-600 hidden saved-indicator opacity-0 transition-opacity duration-500 text-center">Gespeichert</div>
                        <% end %>
                      </td>
                    <% end %>

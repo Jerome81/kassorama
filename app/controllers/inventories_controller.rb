@@ -53,9 +53,9 @@ class InventoriesController < ApplicationController
 
   def complete
     if @inventory.update(completed_at: Time.current)
-      redirect_to @inventory, notice: "Inventory marked as completed."
+      redirect_to @inventory, notice: "Inventar als abgeschlossen markiert."
     else
-      redirect_to @inventory, alert: "Failed to complete inventory."
+      redirect_to @inventory, alert: "Inventar konnte nicht abgeschlossen werden."
     end
   end
 
@@ -64,14 +64,14 @@ class InventoriesController < ApplicationController
     require "prawn/table"
 
     pdf = Prawn::Document.new
-    pdf.text "Inventory Report: #{@inventory.name}", size: 20, style: :bold
-    pdf.text "Generated on: #{Time.current.strftime('%d.%m.%Y %H:%M')}", size: 10
+    pdf.text "Inventarbericht: #{@inventory.name}", size: 20, style: :bold
+    pdf.text "Erstellt am: #{Time.current.strftime('%d.%m.%Y %H:%M')}", size: 10
     pdf.move_down 20
 
     active_articles = Article.where(status: 'active').order(:name)
     inventory_lines = @inventory.inventory_lines.group_by(&:article_id)
 
-    table_data = [["Article", "Quantity", "Cost", "Total Value"]]
+    table_data = [["Artikel", "Menge", "Einstandspreis", "Gesamtwert"]]
     grand_total = 0
 
     active_articles.each do |article|
@@ -90,7 +90,7 @@ class InventoriesController < ApplicationController
       ]
     end
 
-    table_data << ["", "", "Grand Total", helpers.number_to_currency(grand_total, unit: '')]
+    table_data << ["", "", "Gesamtsumme", helpers.number_to_currency(grand_total, unit: '')]
 
     pdf.table(table_data, header: true, width: pdf.bounds.width) do
       row(0).font_style = :bold
@@ -132,7 +132,7 @@ class InventoriesController < ApplicationController
           )
         end
 
-        format.html { redirect_to @inventory, notice: "Inventory was successfully created." }
+        format.html { redirect_to @inventory, notice: "Inventar wurde erfolgreich erstellt." }
         format.json { render :show, status: :created, location: @inventory }
       else
         format.html { render :new, status: :unprocessable_entity }
@@ -145,7 +145,7 @@ class InventoriesController < ApplicationController
   def update
     respond_to do |format|
       if @inventory.update(inventory_params)
-        format.html { redirect_to @inventory, notice: "Inventory was successfully updated.", status: :see_other }
+        format.html { redirect_to @inventory, notice: "Inventar wurde erfolgreich aktualisiert.", status: :see_other }
         format.json { render :show, status: :ok, location: @inventory }
       else
         format.html { render :edit, status: :unprocessable_entity }
@@ -159,7 +159,7 @@ class InventoriesController < ApplicationController
     @inventory.destroy!
 
     respond_to do |format|
-      format.html { redirect_to inventories_path, notice: "Inventory was successfully destroyed.", status: :see_other }
+      format.html { redirect_to inventories_path, notice: "Inventar wurde erfolgreich gelöscht.", status: :see_other }
       format.json { head :no_content }
     end
   end

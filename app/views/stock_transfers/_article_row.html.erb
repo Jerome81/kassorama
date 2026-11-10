@@ -5,7 +5,8 @@
   # - primary_location
   # - recent_sales (map)
   # - recent_variant_sales (map)
-  # - other_locations
+  # - source_location
+  # - target_location
   # - selected_supplier_id
 %>
 <% 
@@ -34,19 +35,17 @@
   </td>
   <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500 font-mono border-l border-gray-200">
       <% 
-         # Only show transfer form if there is stock to move (or generic check)
-         # Using aggregated check from controller isn't available here easily per row, 
-         # but we can show form if there is non-variant stock in other locations.
-         has_stock_in_others = other_locations.any? { |loc| (article.stocks.find { |s| s.location_id == loc.id && s.variant_id.nil? }&.quantity || 0) > 0 }
+         has_stock_in_source = source_location && target_location && source_location.id != target_location.id &&
+           (article.stocks.find { |s| s.location_id == source_location.id && s.variant_id.nil? }&.quantity || 0) > 0
       %>
-      <% if has_stock_in_others %>
+      <% if has_stock_in_source %>
           <%= form_with url: stock_transfers_path, method: :post, class: "flex items-center space-x-2 justify-end" do |f| %>
             <%= f.hidden_field :article_id, value: article.id %>
             <%= f.hidden_field :supplier_id, value: selected_supplier_id %>
+            <%= f.hidden_field :source_location_id, value: source_location.id, class: "transfer-source-location-input" %>
+            <%= f.hidden_field :target_location_id, value: target_location.id, class: "transfer-target-location-input" %>
             
             <%= f.number_field :quantity, placeholder: "Menge", class: "w-20 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]", min: 1 %>
-            
-            <%= f.collection_select :source_location_id, other_locations, :id, :name, {}, class: "w-32 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]" %>
             
             <%= f.submit "Verschieben", class: "px-3 py-1 bg-[#FFD100] text-[#2C2C2C] text-xs font-bold rounded hover:bg-[#ffe066] cursor-pointer" %>
           <% end %>
@@ -81,17 +80,18 @@
           </td>
           <td class="px-6 py-2 whitespace-nowrap text-sm text-right text-gray-500 font-mono border-l border-gray-200">
               <% 
-                 v_has_stock_in_others = other_locations.any? { |loc| (variant.stocks.find { |s| s.location_id == loc.id }&.quantity || 0) > 0 }
+                 v_has_stock_in_source = source_location && target_location && source_location.id != target_location.id &&
+                   (variant.stocks.find { |s| s.location_id == source_location.id }&.quantity || 0) > 0
               %>
-              <% if v_has_stock_in_others %>
+              <% if v_has_stock_in_source %>
                   <%= form_with url: stock_transfers_path, method: :post, class: "flex items-center space-x-2 justify-end" do |f| %>
                     <%= f.hidden_field :article_id, value: article.id %>
                     <%= f.hidden_field :variant_id, value: variant.id %>
                     <%= f.hidden_field :supplier_id, value: selected_supplier_id %>
+                    <%= f.hidden_field :source_location_id, value: source_location.id, class: "transfer-source-location-input" %>
+                    <%= f.hidden_field :target_location_id, value: target_location.id, class: "transfer-target-location-input" %>
                     
                     <%= f.number_field :quantity, placeholder: "Menge", class: "w-20 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]", min: 1 %>
-                    
-                    <%= f.collection_select :source_location_id, other_locations, :id, :name, {}, class: "w-32 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]" %>
                     
                     <%= f.submit "Verschieben", class: "px-3 py-1 bg-[#FFD100] text-[#2C2C2C] text-xs font-bold rounded hover:bg-[#ffe066] cursor-pointer" %>
                   <% end %>

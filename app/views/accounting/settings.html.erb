@@ -5,11 +5,11 @@
   </div>
 
   <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
-    <h2 class="text-xl font-semibold mb-4 text-[#2C2C2C]">API Credentials</h2>
+    <h2 class="text-xl font-semibold mb-4 text-[#2C2C2C]">API-Zugangsdaten</h2>
     <p class="text-gray-600 mb-6 text-sm">
       Erstellen Sie eine App im <a href="https://developer.bexio.com" target="_blank" class="text-blue-500 underline">Bexio Developer Portal</a> 
-      und tragen Sie die Credentials hier ein. 
-      <br>Redirect URI: <code><%= accounting_bexio_callback_url %></code>
+      und tragen Sie die Zugangsdaten hier ein. 
+      <br>Weiterleitungs-URI: <code><%= accounting_bexio_callback_url %></code>
     </p>
 
     <%= form_with url: accounting_settings_path, method: :post, class: "space-y-4" do |f| %>
@@ -46,10 +46,10 @@
                   </div>
                <% else %>
                   <div class="text-gray-500 italic">Nicht verbunden</div>
-                  <%= link_to "Connect to Bexio", accounting_bexio_auth_path, class: "bg-[#FFD100] hover:bg-yellow-400 text-gray-900 font-bold py-2 px-4 rounded shadow-sm inline-block" %>
+                  <%= link_to "Mit Bexio verbinden", accounting_bexio_auth_path, class: "bg-[#FFD100] hover:bg-yellow-400 text-gray-900 font-bold py-2 px-4 rounded shadow-sm inline-block" %>
                <% end %>
             <% else %>
-               <p class="text-sm text-gray-500">Bitte speichern Sie zuerst Ihre Credentials.</p>
+               <p class="text-sm text-gray-500">Bitte speichern Sie zuerst Ihre Zugangsdaten.</p>
             <% end %>
         </div>
 

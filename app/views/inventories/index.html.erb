@@ -1,4 +1,4 @@
-<% content_for :title, "Inventories" %>
+<% content_for :title, "Inventar" %>
 
 <div class="w-full">
   <% if notice.present? %>
@@ -6,8 +6,8 @@
   <% end %>
 
   <div class="flex justify-between items-center">
-    <h1 class="font-bold text-4xl">Inventories</h1>
-    <%= link_to "New inventory", new_inventory_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold" %>
+    <h1 class="font-bold text-4xl">Inventar</h1>
+    <%= link_to "Neues Inventar", new_inventory_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold" %>
   </div>
 
   <div class="relative overflow-x-auto shadow-md sm:rounded-lg mt-8">
@@ -15,8 +15,8 @@
       <thead class="text-xs text-white uppercase bg-[#2C2C2C]">
         <tr>
           <th scope="col" class="px-6 py-3">Name</th>
-          <th scope="col" class="px-6 py-3">Created At</th>
-          <th scope="col" class="px-6 py-3 text-right">Actions</th>
+          <th scope="col" class="px-6 py-3">Erstellt am</th>
+          <th scope="col" class="px-6 py-3 text-right">Aktionen</th>
         </tr>
       </thead>
       <tbody>
@@ -26,11 +26,11 @@
               <%= inventory.name %>
             </td>
             <td class="px-6 py-4">
-              <%= inventory.created_at.strftime("%B %d, %Y") %>
+              <%= inventory.created_at.strftime("%d.%m.%Y") %>
             </td>
             <td class="px-6 py-4 text-right">
-              <%= link_to "Show", inventory, class: "font-medium text-[#2C2C2C] hover:underline hover:text-[#FFD100] mr-3" %>
-              <%= link_to "Edit", edit_inventory_path(inventory), class: "font-medium text-[#2C2C2C] hover:underline hover:text-[#FFD100]" %>
+              <%= link_to "Anzeigen", inventory, class: "font-medium text-[#2C2C2C] hover:underline hover:text-[#FFD100] mr-3" %>
+              <%= link_to "Bearbeiten", edit_inventory_path(inventory), class: "font-medium text-[#2C2C2C] hover:underline hover:text-[#FFD100]" %>
             </td>
           </tr>
         <% end %>

@@ -6,7 +6,7 @@ class VariantsController < ApplicationController
 
   def update
     if @variant.update(variant_params)
-      redirect_to article_path(@variant.article), notice: "Variant updated."
+      redirect_to article_path(@variant.article), notice: "Variante aktualisiert."
     else
       render :edit, status: :unprocessable_entity
     end

@@ -1,4 +1,4 @@
-<% content_for :title, "Tax codes" %>
+<% content_for :title, "MWSt-Codes" %>
 
 <div class="w-full">
   <% if notice.present? %>
@@ -6,8 +6,8 @@
   <% end %>
 
   <div class="flex justify-between items-center mb-6 gap-4">
-    <h1 class="font-bold text-4xl text-[#2C2C2C]">Tax codes</h1>
-    <%= link_to "New tax code", new_tax_code_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold hover:bg-yellow-400 transition" %>
+    <h1 class="font-bold text-4xl text-[#2C2C2C]">MWSt-Codes</h1>
+    <%= link_to "Neuer MWSt-Code", new_tax_code_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold hover:bg-yellow-400 transition" %>
   </div>
 
   <div id="tax_codes" class="min-w-full divide-y divide-gray-200 space-y-5">
@@ -16,14 +16,14 @@
         <div class="flex flex-col sm:flex-row justify-between items-center pb-5 sm:pb-0">
           <%= render tax_code %>
           <div class="w-full sm:w-auto flex flex-col sm:flex-row space-x-2 space-y-2">
-            <%= link_to "Show", tax_code, class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
-            <%= link_to "Edit", edit_tax_code_path(tax_code), class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
-            <%= button_to "Destroy", tax_code, method: :delete, class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 text-white bg-red-600 hover:bg-red-500 font-medium cursor-pointer", data: { turbo_confirm: "Are you sure?" } %>
+            <%= link_to "Anzeigen", tax_code, class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+            <%= link_to "Bearbeiten", edit_tax_code_path(tax_code), class: "w-full sm:w-auto text-center rounded-md px-3.5 py-2.5 bg-gray-100 hover:bg-gray-50 inline-block font-medium" %>
+            <%= button_to "Löschen", tax_code, method: :delete, class: "w-full sm:w-auto rounded-md px-3.5 py-2.5 text-white bg-red-600 hover:bg-red-500 font-medium cursor-pointer", data: { turbo_confirm: "Wirklich löschen?" } %>
           </div>
         </div>
       <% end %>
     <% else %>
-      <p class="text-center my-10">No tax codes found.</p>
+      <p class="text-center my-10">Keine MWSt-Codes gefunden.</p>
     <% end %>
   </div>
 </div>

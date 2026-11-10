@@ -30,7 +30,7 @@
             <% end %>
             
             <span class="<%= is_inactive ? 'bg-gray-200 text-gray-600' : 'bg-green-100 text-green-700' %> text-xs font-bold px-2 py-1 rounded inline-block">
-                <%= cash_register.status.capitalize %>
+                <%= cash_register.status == 'active' ? 'Aktiv' : 'Inaktiv' %>
             </span>
         </div>
       </div>

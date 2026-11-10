@@ -42,9 +42,9 @@ class LocationsController < ApplicationController
 
       stock.quantity = (stock.quantity || 0) + quantity_to_add
       stock.save!
-      flash[:notice] = "Added #{quantity_to_add} to #{item_name}"
+      flash[:notice] = "#{quantity_to_add} zu #{item_name} hinzugefügt"
     else
-      flash[:alert] = "Quantity must be greater than 0"
+      flash[:alert] = "Menge muss grösser als 0 sein"
     end
     
     redirect_to location_path(@location, search_query: params[:search_query])
@@ -65,7 +65,7 @@ class LocationsController < ApplicationController
 
     respond_to do |format|
       if @location.save
-        format.html { redirect_to @location, notice: "Location was successfully created." }
+        format.html { redirect_to @location, notice: "Lagerort wurde erfolgreich erstellt." }
         format.json { render :show, status: :created, location: @location }
       else
         format.html { render :new, status: :unprocessable_entity }
@@ -78,7 +78,7 @@ class LocationsController < ApplicationController
   def update
     respond_to do |format|
       if @location.update(location_params)
-        format.html { redirect_to @location, notice: "Location was successfully updated.", status: :see_other }
+        format.html { redirect_to @location, notice: "Lagerort wurde erfolgreich aktualisiert.", status: :see_other }
         format.json { render :show, status: :ok, location: @location }
       else
         format.html { render :edit, status: :unprocessable_entity }
@@ -93,7 +93,7 @@ class LocationsController < ApplicationController
     @location.destroy!
 
     respond_to do |format|
-      format.html { redirect_to locations_path, notice: "Location was successfully destroyed.", status: :see_other }
+      format.html { redirect_to locations_path, notice: "Lagerort wurde erfolgreich gelöscht.", status: :see_other }
       format.json { head :no_content }
     end
   end

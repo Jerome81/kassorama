@@ -27,13 +27,13 @@
           <div class="hidden md:flex items-center space-x-4">
              <% if @cash_register&.persisted? %>
                 <%= link_to "Transaktionen", transactions_cash_register_path(@cash_register), class: "py-2 px-3 rounded hover:text-[#FFD100] transition duration-300 #{'text-[#FFD100]' if request.path.include?('/transactions')}" %>
-                <%= link_to "Kassensturz", cash_count_cash_register_path(@cash_register), class: "py-2 px-3 rounded hover:text-[#FFD100] transition duration-300 #{'text-[#FFD100]' if request.path.include?('/cash_count')}" %>
+                <%= link_to "Kassensturz", cash_count_cash_register_path(@cash_register), data: { turbo_prefetch: false }, class: "py-2 px-3 rounded hover:text-[#FFD100] transition duration-300 #{'text-[#FFD100]' if request.path.include?('/cash_count')}" %>
                 <%= link_to "Bargeld Entnehmen", withdraw_cash_pos_path(@cash_register), class: "py-2 px-3 rounded hover:text-[#FFD100] transition duration-300 #{'text-[#FFD100]' if request.path.include?('/withdraw_cash')}" %>
              <% end %>
              
              <% if current_user %>
                <div class="flex items-center text-sm ml-4 border-l border-gray-600 pl-4 space-x-3">
-                 <%= button_to logout_path, method: :delete, title: "Logout", class: "text-gray-400 hover:text-white transition" do %>
+                 <%= button_to logout_path, method: :delete, title: "Abmelden", class: "text-gray-400 hover:text-white transition" do %>
                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
                    </svg>
