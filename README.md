@@ -28,6 +28,11 @@ Kassorama is a Point of Sale (POS) and inventory management system built with Ru
     rails db:seed # Optional: only if you need initial seed data
     ```
 
+4.  **Create tailwind.css**
+    ```bash
+    rake assets:precompile
+    ```
+
 ## Development
 
 To start the development server with Tailwind CSS watching for changes (recommended):

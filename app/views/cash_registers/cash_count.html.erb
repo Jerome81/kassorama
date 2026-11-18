@@ -21,9 +21,9 @@
                  <% [200, 100, 50, 20, 10].each do |denom| %>
                      <div class="flex items-center gap-4">
                         <div class="w-24 font-bold text-right"><%= denom %> CHF</div>
-                        <input type="number" min="0" placeholder="0" class="denom-qty w-20 rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-sm" data-denom="<%= denom %>">
+                        <input type="number" min="0" placeholder="0" class="denom-qty w-20 rounded-md border border-gray-300 bg-white shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-sm" data-denom="<%= denom %>">
                         <div class="text-gray-400">×</div>
-                        <input type="number" min="0" step="0.01" placeholder="0.00" class="denom-total-input w-28 rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-right font-mono text-gray-700 text-sm" data-denom="<%= denom %>">
+                        <input type="number" min="0" step="0.01" placeholder="0.00" class="denom-total-input w-28 rounded-md border border-gray-300 bg-white shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-right font-mono text-gray-700 text-sm" data-denom="<%= denom %>">
                      </div>
                   <% end %>
                </div>
@@ -36,9 +36,9 @@
                   <% [5.0, 2.0, 1.0, 0.50, 0.20, 0.10, 0.05].each do |denom| %>
                      <div class="flex items-center gap-4">
                         <div class="w-24 font-bold text-right"><%= number_to_currency(denom, unit: '') %> CHF</div>
-                        <input type="number" min="0" placeholder="0" class="denom-qty w-20 rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-sm" data-denom="<%= denom %>">
+                        <input type="number" min="0" placeholder="0" class="denom-qty w-20 rounded-md border border-gray-300 bg-white shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-sm" data-denom="<%= denom %>">
                         <div class="text-gray-400">×</div>
-                        <input type="number" min="0" step="0.01" placeholder="0.00" class="denom-total-input w-28 rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-right font-mono text-gray-700 text-sm" data-denom="<%= denom %>">
+                        <input type="number" min="0" step="0.01" placeholder="0.00" class="denom-total-input w-28 rounded-md border border-gray-300 bg-white shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 text-right font-mono text-gray-700 text-sm" data-denom="<%= denom %>">
                      </div>
                   <% end %>
                </div>

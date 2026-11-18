@@ -27,7 +27,7 @@
 
   <div class="my-5">
     <%= form.label :amount, "Aktueller Bargeldbestand" %>
-    <%= form.number_field :amount, step: 0.01, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+    <%= form.number_field :amount, step: 0.01, class: "block shadow rounded-md border border-gray-300 bg-white outline-none px-3 py-2 mt-2 w-full" %>
   </div>
 
   <div class="my-5">
@@ -42,7 +42,7 @@
     </div>
     <div>
       <%= form.label :terminal_port, "Kartenterminal Port (OPI)" %>
-      <%= form.number_field :terminal_port, value: (cash_register.terminal_port.nil? || cash_register.terminal_port == 20007 ? 4100 : cash_register.terminal_port), class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      <%= form.number_field :terminal_port, value: (cash_register.terminal_port.nil? || cash_register.terminal_port == 20007 ? 4100 : cash_register.terminal_port), class: "block shadow rounded-md border border-gray-300 bg-white outline-none px-3 py-2 mt-2 w-full" %>
     </div>
   </div>
 
@@ -53,7 +53,7 @@
     </div>
     <div>
       <%= form.label :printer_port, "Drucker Port" %>
-      <%= form.number_field :printer_port, value: (cash_register.printer_port || 8081), class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-2 w-full" %>
+      <%= form.number_field :printer_port, value: (cash_register.printer_port || 8081), class: "block shadow rounded-md border border-gray-300 bg-white outline-none px-3 py-2 mt-2 w-full" %>
     </div>
   </div>
 

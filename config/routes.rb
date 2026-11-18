@@ -27,6 +27,7 @@ Rails.application.routes.draw do
       post :export
     end
   end
+  resources :stock_additions, only: [:index, :create]
   resources :stock_transfers, only: [:index, :create]
   resources :stock_orders, only: [:index]
   resources :inventories do

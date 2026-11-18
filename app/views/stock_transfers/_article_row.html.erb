@@ -45,7 +45,7 @@
             <%= f.hidden_field :source_location_id, value: source_location.id, class: "transfer-source-location-input" %>
             <%= f.hidden_field :target_location_id, value: target_location.id, class: "transfer-target-location-input" %>
             
-            <%= f.number_field :quantity, placeholder: "Menge", class: "w-20 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]", min: 1 %>
+            <%= f.number_field :quantity, placeholder: "Menge", class: "w-20 px-2 py-1 text-sm border border-gray-300 bg-white rounded focus:ring-[#FFD100] focus:border-[#FFD100]", min: 1 %>
             
             <%= f.submit "Verschieben", class: "px-3 py-1 bg-[#FFD100] text-[#2C2C2C] text-xs font-bold rounded hover:bg-[#ffe066] cursor-pointer" %>
           <% end %>
@@ -91,7 +91,7 @@
                     <%= f.hidden_field :source_location_id, value: source_location.id, class: "transfer-source-location-input" %>
                     <%= f.hidden_field :target_location_id, value: target_location.id, class: "transfer-target-location-input" %>
                     
-                    <%= f.number_field :quantity, placeholder: "Menge", class: "w-20 px-2 py-1 text-sm border-gray-300 rounded focus:ring-[#FFD100] focus:border-[#FFD100]", min: 1 %>
+                    <%= f.number_field :quantity, placeholder: "Menge", class: "w-20 px-2 py-1 text-sm border border-gray-300 bg-white rounded focus:ring-[#FFD100] focus:border-[#FFD100]", min: 1 %>
                     
                     <%= f.submit "Verschieben", class: "px-3 py-1 bg-[#FFD100] text-[#2C2C2C] text-xs font-bold rounded hover:bg-[#ffe066] cursor-pointer" %>
                   <% end %>

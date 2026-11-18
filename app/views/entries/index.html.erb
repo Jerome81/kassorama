@@ -47,7 +47,7 @@
                    <input type="text" name="tax_code" value="<%= entry.tax_code %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="Steuer">
                 </td>
                 <td class="p-1">
-                   <input type="number" step="0.01" name="amount" value="<%= "%.2f" % (entry.amount || 0) %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-right font-mono font-bold text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="0.00">
+                   <input type="number" step="0.01" name="amount" value="<%= "%.2f" % (entry.amount || 0) %>" class="editable-field w-full border border-gray-300 bg-white focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-sm text-right font-mono font-bold text-gray-900 hover:bg-white focus:bg-white transition-colors" placeholder="0.00">
                 </td>
                 <td class="p-1">
                    <input type="text" name="reference_number" value="<%= entry.reference_number %>" class="editable-field w-full border-transparent bg-transparent focus:border-[#FFD100] focus:ring-0 rounded px-2 py-1 text-xs text-gray-500 hover:bg-white focus:bg-white transition-colors" placeholder="Ref">

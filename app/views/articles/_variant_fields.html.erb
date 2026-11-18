@@ -12,7 +12,12 @@
 
     <div>
       <%= f.label :price, "Preis", class: "block font-medium text-gray-700" %>
-      <%= f.number_field :price, step: 0.01, class: "block shadow rounded-md border border-gray-200 outline-none px-3 py-2 mt-1 w-full" %>
+      <%= f.number_field :price, step: 0.01, class: "block shadow rounded-md border border-gray-300 bg-white outline-none px-3 py-2 mt-1 w-full" %>
+    </div>
+
+    <div>
+      <%= f.label :cost, "Einstandspreis", class: "block font-medium text-gray-700" %>
+      <%= f.number_field :cost, step: 0.01, class: "block shadow rounded-md border border-gray-300 bg-white outline-none px-3 py-2 mt-1 w-full" %>
     </div>
     
     <div>

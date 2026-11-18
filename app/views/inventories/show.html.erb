@@ -5,7 +5,7 @@
       <% if @inventory.completed_at.present? %>
          <span class="text-green-600 font-bold px-4 py-2 bg-green-50 rounded border border-green-200">Abgeschlossen (<%= @inventory.completed_at.strftime("%d.%m.%Y %H:%M") %>)</span>
       <% else %>
-         <%= button_to "Abgeschlossen", complete_inventory_path(@inventory), method: :post, class: "bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white font-bold cursor-pointer", form_class: "inline-block" %>
+         <%= button_to "Abgeschlossen", complete_inventory_path(@inventory), method: :post, class: "bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white font-bold cursor-pointer", form: { id: "complete-inventory-form", class: "inline-block" } %>
       <% end %>
 
       <%= link_to "Name bearbeiten", edit_inventory_path(@inventory), class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium" %>
@@ -13,10 +13,6 @@
       <%= link_to "PDF-Bericht", report_inventory_path(@inventory), class: "bg-[#FFD100] hover:bg-yellow-400 px-4 py-2 rounded text-[#2C2C2C] font-bold cursor-pointer", target: "_blank" %>
     </div>
   </div>
-
-  <% if notice.present? %>
-    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-lg inline-block" id="notice"><%= notice %></p>
-  <% end %>
 
   <div class="overflow-x-auto shadow-md rounded-lg mt-4 bg-white border border-gray-200">
     <table class="w-full text-sm text-left text-gray-500">
@@ -47,13 +43,14 @@
                 <div class="flex items-center space-x-2 justify-center">
                   <input type="number" 
                          value="<%= qty %>" 
-                         class="w-20 text-center border border-gray-300 rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100] inventory-input disabled:bg-gray-100 disabled:text-gray-500"
+                         data-saved-value="<%= qty %>"
+                         class="w-20 text-center border border-gray-300 bg-white rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100] inventory-input disabled:bg-gray-100 disabled:text-gray-500"
                          data-article-id="<%= article.id %>"
                          data-location-id="<%= location.id %>"
                          data-inventory-id="<%= @inventory.id %>"
                          <%= 'disabled' if @inventory.completed_at.present? %>
                   >
-                  <span class="text-xs font-mono text-gray-500 w-8 text-right diff-value">
+                  <span class="text-xs font-mono w-8 text-right diff-value <%= line&.diff.to_i < 0 ? 'text-red-500 font-bold' : (line&.diff.to_i > 0 ? 'text-green-600 font-bold' : 'text-gray-500') %>">
                     <%= (line && line.diff.to_i != 0) ? format('%+d', line.diff) : '-' %>
                   </span>
                 </div>
@@ -83,14 +80,15 @@
                        <div class="flex items-center space-x-2 justify-center">
                          <input type="number" 
                                 value="<%= qty %>" 
-                                class="w-20 text-center border border-gray-300 rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100] inventory-input disabled:bg-gray-100 disabled:text-gray-500"
+                                data-saved-value="<%= qty %>"
+                                class="w-20 text-center border border-gray-300 bg-white rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100] inventory-input disabled:bg-gray-100 disabled:text-gray-500"
                                 data-article-id="<%= article.id %>"
                                 data-variant-id="<%= variant.id %>"
                                 data-location-id="<%= location.id %>"
                                 data-inventory-id="<%= @inventory.id %>"
                                 <%= 'disabled' if @inventory.completed_at.present? %>
                          >
-                         <span class="text-xs font-mono text-gray-500 w-8 text-right diff-value">
+                         <span class="text-xs font-mono w-8 text-right diff-value <%= line&.diff.to_i < 0 ? 'text-red-500 font-bold' : (line&.diff.to_i > 0 ? 'text-green-600 font-bold' : 'text-gray-500') %>">
                            <%= (line && line.diff.to_i != 0) ? format('%+d', line.diff) : '-' %>
                          </span>
                        </div>
@@ -110,21 +108,20 @@
 </div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const inputs = document.querySelectorAll(".inventory-input");
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  (function() {
+    const pendingSaves = new Set();
 
-    inputs.forEach(input => {
-      input.addEventListener("blur", async (e) => {
-        const el = e.target;
-        const articleId = el.dataset.articleId;
-        const variantId = el.dataset.variantId || null;
-        const locationId = el.dataset.locationId;
-        const inventoryId = el.dataset.inventoryId;
-        const quantity = el.value;
+    async function saveInventoryInput(el) {
+      if (el.disabled) return;
+      const articleId = el.dataset.articleId;
+      const variantId = el.dataset.variantId || null;
+      const locationId = el.dataset.locationId;
+      const inventoryId = el.dataset.inventoryId;
+      const quantity = el.value;
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
 
-        // Indicator is no longer immediate sibling, found later via container
-
+      const savePromise = (async () => {
         try {
           const response = await fetch(`/inventories/${inventoryId}/update_line`, {
             method: "POST",
@@ -142,30 +139,34 @@
 
           if (response.ok) {
             const data = await response.json();
-            
+            el.dataset.savedValue = String(quantity);
+
             // Update diff display
-            const diffEl = el.nextElementSibling; 
-            if (data.diff != 0) {
-               diffEl.textContent = (data.diff > 0 ? "+" : "") + data.diff;
-               diffEl.className = `text-xs font-mono w-8 text-right diff-value ${data.diff < 0 ? 'text-red-500 font-bold' : 'text-green-600 font-bold'}`;
-            } else {
-               diffEl.textContent = "-";
-               diffEl.className = "text-xs font-mono w-8 text-right diff-value text-gray-500";
+            const diffEl = el.nextElementSibling;
+            if (diffEl) {
+              if (data.diff != 0) {
+                diffEl.textContent = (data.diff > 0 ? "+" : "") + data.diff;
+                diffEl.className = `text-xs font-mono w-8 text-right diff-value ${data.diff < 0 ? 'text-red-500 font-bold' : 'text-green-600 font-bold'}`;
+              } else {
+                diffEl.textContent = "-";
+                diffEl.className = "text-xs font-mono w-8 text-right diff-value text-gray-500";
+              }
             }
 
             // Show saved indicator temporarily
             const container = el.parentElement.parentElement;
-            const indicator = container.querySelector('.saved-indicator');
-            
-            indicator.classList.remove("hidden", "opacity-0");
-            setTimeout(() => {
-              indicator.classList.add("opacity-0");
-             setTimeout(() => indicator.classList.add("hidden"), 500); 
-            }, 1000);
-            
+            const indicator = container ? container.querySelector('.saved-indicator') : null;
+            if (indicator) {
+              indicator.classList.remove("hidden", "opacity-0");
+              setTimeout(() => {
+                indicator.classList.add("opacity-0");
+                setTimeout(() => indicator.classList.add("hidden"), 500);
+              }, 1000);
+            }
+
             // Highlight box briefly
             el.classList.add("bg-green-50");
-            setTimeout(() => el.classList.remove("bg-green-50"), 2000); 
+            setTimeout(() => el.classList.remove("bg-green-50"), 2000);
           } else {
             console.error("Failed to save");
             el.classList.add("bg-red-50", "border-red-500");
@@ -174,7 +175,51 @@
           console.error("Error:", err);
           el.classList.add("bg-red-50", "border-red-500");
         }
+      })();
+
+      pendingSaves.add(savePromise);
+      try {
+        await savePromise;
+      } finally {
+        pendingSaves.delete(savePromise);
+      }
+    }
+
+    function initInventoryView() {
+      const inputs = document.querySelectorAll(".inventory-input");
+      inputs.forEach(input => {
+        if (input.dataset.initialized) return;
+        input.dataset.initialized = "true";
+
+        input.addEventListener("blur", (e) => {
+          saveInventoryInput(e.target);
+        });
       });
-    });
-  });
+
+      const completeForm = document.getElementById("complete-inventory-form");
+      if (completeForm && !completeForm.dataset.initialized) {
+        completeForm.dataset.initialized = "true";
+        completeForm.addEventListener("submit", async (e) => {
+          if (completeForm.dataset.submittingAfterSave) return;
+
+          const dirtyInputs = Array.from(document.querySelectorAll(".inventory-input")).filter(
+            el => !el.disabled && String(el.value) !== String(el.dataset.savedValue)
+          );
+
+          if (dirtyInputs.length > 0 || pendingSaves.size > 0) {
+            e.preventDefault();
+            dirtyInputs.forEach(el => saveInventoryInput(el));
+            await Promise.all(Array.from(pendingSaves));
+            completeForm.dataset.submittingAfterSave = "true";
+            completeForm.requestSubmit();
+          }
+        });
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", initInventoryView);
+    document.addEventListener("turbo:load", initInventoryView);
+    document.addEventListener("turbo:render", initInventoryView);
+    initInventoryView();
+  })();
 </script>

@@ -1,10 +1,6 @@
 <% content_for :title, "MWSt-Codes" %>
 
 <div class="w-full">
-  <% if notice.present? %>
-    <p class="py-2 px-3 bg-green-50 mb-5 text-green-500 font-medium rounded-md inline-block" id="notice"><%= notice %></p>
-  <% end %>
-
   <div class="flex justify-between items-center mb-6 gap-4">
     <h1 class="font-bold text-4xl text-[#2C2C2C]">MWSt-Codes</h1>
     <%= link_to "Neuer MWSt-Code", new_tax_code_path, class: "rounded-lg py-3 px-5 bg-[#FFD100] text-[#2C2C2C] block font-bold hover:bg-yellow-400 transition" %>

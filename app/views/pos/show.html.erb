@@ -32,7 +32,7 @@
         
         <div class="mb-4">
              <label class="block text-sm font-medium text-gray-700 mb-1">Rabatt Wert</label>
-             <input type="number" id="item_discount_value" class="w-full border-gray-300 rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100] text-lg" placeholder="0.00" step="0.01" autofocus>
+             <input type="number" id="item_discount_value" class="w-full border border-gray-300 bg-white rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100] text-lg" placeholder="0.00" step="0.01" autofocus>
         </div>
         
         <div class="flex gap-4 mb-6">
@@ -260,13 +260,19 @@
       <!-- Search Bar -->
       <div class="flex justify-between mb-2 gap-2">
         <div class="flex space-x-2 overflow-x-auto">
-          <% @cash_register.precreated_tabs.to_s.split(',').map(&:strip).reject(&:empty?).each do |tab_name| %>
-            <% existing_order = @parked_orders.find { |o| o.name == tab_name } %>
+          <% precreated_tab_names = @cash_register.precreated_tabs.to_s.split(',').map(&:strip).reject(&:empty?) %>
+          <% shown_parked_order_ids = [] %>
+          <% precreated_tab_names.each do |tab_name| %>
+            <% existing_order = @parked_orders.find { |o| o.name == tab_name && !shown_parked_order_ids.include?(o.id) } %>
             <% if existing_order %>
+               <% shown_parked_order_ids << existing_order.id %>
                <%= button_to tab_name, restore_order_pos_path(@cash_register, order_id: existing_order.id), method: :post, class: "text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded font-medium transition cursor-pointer border border-red-200 whitespace-nowrap", form: { class: "inline-block" } %>
             <% else %>
                <%= button_to tab_name, park_order_pos_path(@cash_register, name: tab_name), method: :post, class: "text-sm bg-gray-50 hover:bg-gray-100 text-gray-500 px-3 py-1 rounded font-medium transition cursor-pointer border border-gray-300 border-dashed whitespace-nowrap", form: { class: "inline-block" } %>
             <% end %>
+          <% end %>
+          <% @parked_orders.reject { |o| shown_parked_order_ids.include?(o.id) }.each do |parked_order| %>
+            <%= button_to parked_order.name, restore_order_pos_path(@cash_register, order_id: parked_order.id), method: :post, class: "text-sm bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded font-medium transition cursor-pointer border border-red-200 whitespace-nowrap", form: { class: "inline-block" } %>
           <% end %>
         </div>
         <div class="flex space-x-2 shrink-0">
@@ -281,20 +287,44 @@
 
       <%= form_with url: park_order_pos_path(@cash_register), method: :post, id: "park-order-form", class: "hidden" do |f| %>
           <%= f.hidden_field :name, id: "park-order-name" %>
+          <%= f.hidden_field :target_order_id, id: "park-target-order-id" %>
       <% end %>
 
 <div id="park-order-modal" class="hidden fixed inset-0 w-full h-full bg-gray-600 bg-opacity-50 z-[9999] grid place-items-center">
-    <div class="bg-white p-6 rounded-lg shadow-xl w-96">
+    <div class="bg-white p-6 rounded-lg shadow-xl w-96 max-w-full">
         <h3 class="text-lg font-bold mb-4">Bestellung parken</h3>
-        <p class="text-sm text-gray-500 mb-4">Bitte geben Sie einen Namen für die Bestellung ein:</p>
+        <p class="text-sm text-gray-500 mb-2">Bitte geben Sie einen Namen für die Bestellung ein:</p>
         
         <div class="mb-4">
-             <input type="text" id="modal-park-order-name-input" class="w-full border-gray-300 rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100]" placeholder="Name">
+             <input type="text" id="modal-park-order-name-input" class="w-full border border-gray-300 bg-white rounded p-2 focus:ring-[#FFD100] focus:border-[#FFD100]" placeholder="Name">
         </div>
+
+        <% if @parked_orders.any? %>
+          <div class="mb-4 pt-3 border-t border-gray-200">
+            <p class="text-sm text-gray-500 mb-2">Oder bestehende Bestellung auswählen:</p>
+            <div class="max-h-60 overflow-y-auto divide-y divide-gray-100 text-left border border-gray-200 rounded-lg">
+              <% @parked_orders.each do |parked_order| %>
+                <div class="flex justify-between items-center py-2.5 px-3 hover:bg-gray-100 transition cursor-pointer"
+                     onclick="selectExistingParkedOrder('<%= parked_order.id %>')">
+                  <div>
+                    <div class="font-bold text-sm text-gray-800"><%= parked_order.name %></div>
+                    <div class="text-xs text-gray-500"><%= parked_order.updated_at.strftime("%d.%m.%Y %H:%M") %></div>
+                    <div class="text-xs text-gray-400"><%= parked_order.order_items.sum(&:quantity) %> Artikel, <%= number_to_currency(parked_order.order_items.sum { |i| i.net_price || (i.quantity * i.unit_price) }) %></div>
+                  </div>
+                  <button type="button"
+                          onclick="event.stopPropagation(); selectExistingParkedOrder('<%= parked_order.id %>')"
+                          class="bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs px-2.5 py-1 rounded font-bold cursor-pointer">
+                    Auswählen
+                  </button>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
         
         <div class="flex justify-end gap-2">
-            <button onclick="document.getElementById('park-order-modal').classList.add('hidden')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded font-medium">Abbrechen</button>
-            <button onclick="confirmParkOrder()" class="px-6 py-2 bg-[#FFD100] hover:bg-yellow-400 text-gray-900 font-bold rounded shadow-sm">Parken</button>
+            <button type="button" onclick="document.getElementById('park-order-modal').classList.add('hidden')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded font-medium cursor-pointer">Abbrechen</button>
+            <button type="button" onclick="confirmParkOrder()" class="px-4 py-2 bg-[#FFD100] hover:bg-yellow-400 text-gray-900 font-bold rounded shadow-sm cursor-pointer">Parken</button>
         </div>
     </div>
 </div>
@@ -304,6 +334,7 @@
               const currentOrderName = "<%= j @order&.name %>";
               
               if (currentOrderName && currentOrderName.trim() !== "") {
+                  document.getElementById("park-target-order-id").value = "";
                   document.getElementById("park-order-name").value = currentOrderName;
                   document.getElementById("park-order-form").requestSubmit();
                   return;
@@ -335,6 +366,7 @@
           function confirmParkOrder() {
               const name = document.getElementById('modal-park-order-name-input').value;
               if (name && name.trim() !== "") {
+                  document.getElementById("park-target-order-id").value = "";
                   document.getElementById("park-order-name").value = name;
                   document.getElementById("park-order-form").requestSubmit();
                   document.getElementById('park-order-modal').classList.add('hidden');
@@ -342,6 +374,12 @@
                   // Optional: highlight error
                   document.getElementById('modal-park-order-name-input').classList.add('border-red-500');
               }
+          }
+
+          function selectExistingParkedOrder(orderId) {
+              document.getElementById("park-target-order-id").value = orderId;
+              document.getElementById('park-order-modal').classList.add('hidden');
+              document.getElementById("park-order-form").requestSubmit();
           }
       </script>
 

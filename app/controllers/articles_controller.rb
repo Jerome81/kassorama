@@ -46,6 +46,6 @@ class ArticlesController < ApplicationController
     end
 
     def article_params
-      params.require(:article).permit(:name, :sku, :barcode, :price, :cost, :tax_code_id, :picture, :status, :price_type, :is_voucher, :article_category_id, :supplier_id, :booking_account, :image, variants_attributes: [:id, :name, :barcode, :price, :picture, :image, :_destroy])
+      params.require(:article).permit(:name, :sku, :barcode, :price, :cost, :tax_code_id, :picture, :status, :price_type, :is_voucher, :article_category_id, :supplier_id, :booking_account, :image, variants_attributes: [:id, :name, :barcode, :price, :cost, :picture, :image, :_destroy])
     end
 end

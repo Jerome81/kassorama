@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@layer base {
+  input[type="number"] {
+    border-width: 1px;
+    border-style: solid;
+    border-color: var(--color-gray-300, #d1d5db);
+  }
+}
+

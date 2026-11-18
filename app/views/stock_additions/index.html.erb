@@ -1,0 +1,194 @@
+<div class="max-w-7xl mx-auto">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="font-bold text-3xl text-[#2C2C2C]">Waren hinzufügen</h1>
+    <% if @added_articles.any? %>
+      <%= link_to "Liste leeren", stock_additions_path(clear: 1), id: "clear-stock-additions-btn", class: "bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded text-[#2C2C2C] font-medium text-sm" %>
+    <% end %>
+  </div>
+
+  <!-- Scan / Search Card -->
+  <div class="bg-white p-6 shadow rounded-lg mb-6">
+    <h2 class="text-xl font-bold mb-4 text-[#2C2C2C]">Artikel scannen oder suchen</h2>
+    <%= form_with url: stock_additions_path, method: :get, class: "flex gap-2 mb-2" do |form| %>
+      <%= form.text_field :search_query,
+            value: (@search_results.present? ? params[:search_query] : ''),
+            class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-[#FFD100] focus:ring-[#FFD100] p-2 border",
+            placeholder: "Barcode scannen, SKU oder Name",
+            autofocus: true %>
+      <%= form.submit "Suchen", class: "bg-[#2C2C2C] text-white px-4 py-2 rounded font-bold hover:bg-black cursor-pointer" %>
+    <% end %>
+
+    <% if @search_results.present? %>
+      <div class="border border-gray-200 rounded-lg overflow-hidden mt-4">
+        <div class="bg-gray-50 px-4 py-2 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
+          Mehrere Artikel gefunden – bitte auswählen
+        </div>
+        <ul class="divide-y divide-gray-200">
+          <% @search_results.each do |article| %>
+            <li class="p-3 hover:bg-gray-50">
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <p class="font-bold text-sm text-gray-900"><%= article.name %></p>
+                  <p class="text-xs text-gray-500">
+                    <%= article.sku %> | <%= article.barcode %>
+                    <% if article.variants.any? %>
+                      (<%= article.variants.count %> Varianten: <%= article.variants.map(&:name).join(", ") %>)
+                    <% end %>
+                  </p>
+                </div>
+                <%= link_to "Auswählen",
+                      stock_additions_path(add_article_id: article.id),
+                      class: "bg-[#FFD100] text-[#2C2C2C] px-3 py-1 rounded text-sm font-bold hover:bg-yellow-400 cursor-pointer" %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% elsif @no_results %>
+      <p class="text-gray-500 text-sm mt-2">Keine Artikel gefunden.</p>
+    <% end %>
+  </div>
+
+  <!-- Table of Added Articles -->
+  <% if @locations.empty? %>
+    <div class="text-center p-12 bg-white rounded-lg shadow">
+      <p class="text-gray-500">Keine Lagerorte definiert. Bitte erstellen Sie zuerst einen Lagerort.</p>
+    </div>
+  <% elsif @added_articles.any? %>
+    <%= form_with url: stock_additions_path, method: :post, id: "stock-additions-form" do |form| %>
+      <div class="overflow-x-auto shadow-md rounded-lg bg-white border border-gray-200">
+        <table class="w-full text-sm text-left text-gray-500" id="stock-additions-table">
+          <thead class="text-xs text-white uppercase bg-[#2C2C2C]">
+            <tr>
+              <th scope="col" class="px-6 py-4">Artikel</th>
+              <% @locations.each do |location| %>
+                <th scope="col" class="px-6 py-4 text-center"><%= location.name %></th>
+              <% end %>
+              <th scope="col" class="px-4 py-4 text-right w-24">Aktion</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <% @added_articles.each do |article| %>
+              <tr class="hover:bg-yellow-50">
+                <td class="px-6 py-4 font-medium text-gray-900 border-r border-gray-100">
+                  <div class="font-bold"><%= article.name %></div>
+                  <div class="text-xs text-gray-400"><%= article.sku %> | <%= article.barcode %></div>
+                </td>
+                <% @locations.each do |location| %>
+                  <%
+                    stock = article.stocks.find { |s| s.location_id == location.id && s.variant_id.nil? }
+                    current_qty = stock&.quantity || 0
+                  %>
+                  <td class="px-4 py-3 text-center border-r border-gray-100">
+                    <div class="flex items-center justify-center space-x-2">
+                      <span class="text-xs font-mono text-gray-500 whitespace-nowrap" title="Aktueller Bestand">
+                        Bestand: <strong class="text-gray-800"><%= current_qty %></strong>
+                      </span>
+                      <%= number_field_tag "quantities[#{article.id}][#{location.id}]",
+                            nil,
+                            min: 0,
+                            placeholder: "0",
+                            class: "w-20 text-center border border-gray-300 bg-white rounded p-2 text-gray-900 focus:ring-[#FFD100] focus:border-[#FFD100] stock-addition-input" %>
+                    </div>
+                  </td>
+                <% end %>
+                <td class="px-4 py-3 text-right">
+                  <%= link_to "Entfernen",
+                        stock_additions_path(remove_article_id: article.id),
+                        data: { remove_article_id: article.id },
+                        class: "text-red-600 hover:text-red-800 text-xs font-medium remove-article-link" %>
+                </td>
+              </tr>
+
+              <% if article.variants.any? %>
+                <% article.variants.each do |variant| %>
+                  <tr class="hover:bg-yellow-50 bg-gray-50">
+                    <td class="px-6 py-2 font-medium text-gray-600 border-r border-gray-100 pl-12">
+                      <div class="flex items-center">
+                        <span class="text-gray-400 mr-2">↳</span> <%= variant.name %>
+                      </div>
+                      <div class="text-[10px] text-gray-400 font-normal pl-4"><%= variant.barcode %></div>
+                    </td>
+                    <% @locations.each do |location| %>
+                      <%
+                        v_stock = variant.stocks.find { |s| s.location_id == location.id }
+                        v_current_qty = v_stock&.quantity || 0
+                      %>
+                      <td class="px-4 py-2 text-center border-r border-gray-100">
+                        <div class="flex items-center justify-center space-x-2">
+                          <span class="text-xs font-mono text-gray-500 whitespace-nowrap" title="Aktueller Bestand">
+                            Bestand: <strong class="text-gray-800"><%= v_current_qty %></strong>
+                          </span>
+                          <%= number_field_tag "variant_quantities[#{variant.id}][#{location.id}]",
+                                nil,
+                                min: 0,
+                                placeholder: "0",
+                                class: "w-20 text-center border border-gray-300 bg-white rounded p-2 text-gray-900 focus:ring-[#FFD100] focus:border-[#FFD100] stock-addition-input" %>
+                        </div>
+                      </td>
+                    <% end %>
+                    <td class="px-4 py-2 text-right"></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <%= form.submit "Waren hinzufügen", class: "bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] font-bold py-3 px-6 rounded-lg shadow cursor-pointer transition" %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="bg-white shadow rounded-lg p-8 text-center text-gray-500">
+      Noch keine Artikel hinzugefügt. Scannen oder suchen Sie oben einen Artikel, um ihn zur Tabelle hinzuzufügen.
+    </div>
+  <% end %>
+</div>
+
+<script>
+  function initStockAdditionsDraft() {
+    const STORAGE_KEY = "kassorama_stock_additions_draft";
+    const table = document.getElementById("stock-additions-table");
+    if (!table) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      return;
+    }
+
+    let draft = {};
+    try {
+      draft = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}");
+    } catch (e) {
+      draft = {};
+    }
+
+    const inputs = table.querySelectorAll(".stock-addition-input");
+    inputs.forEach((input) => {
+      if (draft[input.name] !== undefined && input.value === "") {
+        input.value = draft[input.name];
+      }
+      input.addEventListener("input", () => {
+        draft[input.name] = input.value;
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+      });
+    });
+
+    const form = document.getElementById("stock-additions-form");
+    if (form) {
+      form.addEventListener("submit", () => {
+        sessionStorage.removeItem(STORAGE_KEY);
+      });
+    }
+
+    const clearBtn = document.getElementById("clear-stock-additions-btn");
+    if (clearBtn) {
+      clearBtn.addEventListener("click", () => {
+        sessionStorage.removeItem(STORAGE_KEY);
+      });
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", initStockAdditionsDraft);
+  document.addEventListener("turbo:load", initStockAdditionsDraft);
+</script>

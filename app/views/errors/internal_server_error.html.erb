@@ -1,0 +1,184 @@
+<div class="max-w-4xl mx-auto my-8">
+  <div class="bg-white shadow-lg rounded-2xl p-8 border border-gray-200 text-center">
+    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+      <svg class="h-8 w-8 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+      </svg>
+    </div>
+
+    <h1 class="text-3xl font-bold text-[#2C2C2C] mb-6">Oops, da ist was schief gelaufen.</h1>
+
+    <div class="flex flex-wrap justify-center items-center gap-4">
+      <button type="button"
+              id="error-back-btn"
+              onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '<%= j(request.referer.presence || root_path) %>'; }"
+              class="rounded-lg py-3 px-6 bg-[#FFD100] hover:bg-yellow-400 text-[#2C2C2C] font-bold shadow-sm transition cursor-pointer">
+        Zurück
+      </button>
+
+      <button type="button"
+              id="more-info-btn"
+              onclick="const details = document.getElementById('error-details'); if (details) { details.classList.toggle('hidden'); }"
+              class="rounded-lg py-3 px-6 bg-gray-200 hover:bg-gray-300 text-[#2C2C2C] font-medium transition cursor-pointer">
+        Mehr Informationen
+      </button>
+    </div>
+  </div>
+
+  <% if @exception_wrapper %>
+    <div id="error-details" class="hidden mt-6 bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-200 text-left">
+      <div class="bg-red-700 text-white px-6 py-4">
+        <h2 class="text-xl font-bold break-words">
+          <%= @exception_wrapper.exception_class_name %>
+          <% if params[:controller].present? %>
+            in <%= params[:controller].to_s.camelize %>Controller<% if params[:action].present? %>#<%= params[:action] %><% end %>
+          <% end %>
+        </h2>
+      </div>
+
+      <div class="p-6 space-y-6 text-sm text-gray-800">
+        <!-- Exception Message -->
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Fehlermeldung</h3>
+          <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 font-mono font-semibold whitespace-pre-wrap break-words"><%= @exception_wrapper.message %></div>
+        </div>
+
+        <!-- Extracted Source -->
+        <% if @source_extracts.present? %>
+          <div>
+            <% @source_extracts.each_with_index do |source_extract, index| %>
+              <% if source_extract[:code] %>
+                <div class="source-extract-panel <%= 'hidden' if @show_source_idx != index %>" id="frame-source-0-<%= index %>">
+                  <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                    Extracted source (around line <strong>#<%= source_extract[:line_number] %></strong>):
+                  </h3>
+                  <div class="border border-gray-300 rounded-lg overflow-x-auto bg-gray-900 text-gray-100 font-mono text-xs">
+                    <table class="w-full border-collapse">
+                      <tbody>
+                        <% source_extract[:code].each do |line, source| %>
+                          <% is_active = (line == source_extract[:line_number]) %>
+                          <tr class="<%= is_active ? 'bg-red-900/60 text-white font-bold' : 'hover:bg-gray-800' %>">
+                            <td class="px-3 py-1 text-right select-none text-gray-400 border-r border-gray-700 w-12"><%= line %></td>
+                            <td class="px-3 py-1 whitespace-pre"><% if source.is_a?(Array) %><%= source[0] %><span class="underline decoration-wavy decoration-red-400 bg-yellow-500/30"><%= source[1] %></span><%= source[2] %><% else %><%= source %><% end %></td>
+                          </tr>
+                        <% end %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <!-- Stack Traces -->
+        <% if @traces.present? %>
+          <div>
+            <p class="text-xs text-gray-500 font-mono mb-2">
+              Rails.root: <%= defined?(Rails) && Rails.respond_to?(:root) ? Rails.root : "unset" %>
+            </p>
+
+            <div class="flex flex-wrap gap-2 mb-3">
+              <% @traces.keys.each do |name| %>
+                <% panel_id = "trace-panel-0-#{name.parameterize}" %>
+                <button type="button"
+                        onclick="document.querySelectorAll('.trace-panel-group-0').forEach(el => el.classList.add('hidden')); document.getElementById('<%= panel_id %>').classList.remove('hidden');"
+                        class="px-3 py-1 text-xs font-bold rounded border border-gray-300 bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer">
+                  <%= name %>
+                </button>
+              <% end %>
+            </div>
+
+            <% @traces.each do |name, trace| %>
+              <% panel_id = "trace-panel-0-#{name.parameterize}" %>
+              <div id="<%= panel_id %>" class="trace-panel-group-0 <%= 'hidden' unless name == @trace_to_show %> bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-80 overflow-y-auto font-mono text-xs space-y-1">
+                <% if trace.any? %>
+                  <% trace.each do |frame| %>
+                    <div>
+                      <a href="#"
+                         onclick="const src = document.getElementById('frame-source-0-<%= frame[:id] %>'); if (src) { document.querySelectorAll('.source-extract-panel').forEach(el => el.classList.add('hidden')); src.classList.remove('hidden'); } return false;"
+                         class="text-gray-700 hover:text-red-700 hover:underline break-all">
+                        <%= frame[:trace] %>
+                      </a>
+                    </div>
+                  <% end %>
+                <% else %>
+                  <div class="text-gray-400 italic">Keine Einträge.</div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <!-- Exception Causes -->
+        <% if @exception_wrapper.has_cause? %>
+          <div>
+            <h3 class="text-sm font-bold text-red-700 uppercase tracking-wider mb-2">Exception Causes</h3>
+            <div class="space-y-3">
+              <% @exception_wrapper.wrapped_causes.each_with_index do |cause_wrapper, idx| %>
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div class="font-bold text-red-800 font-mono mb-2">
+                    <%= cause_wrapper.exception_class_name %>: <%= cause_wrapper.message %>
+                  </div>
+                  <% if cause_wrapper.full_trace.present? %>
+                    <pre class="text-xs font-mono text-gray-600 overflow-x-auto max-h-48 whitespace-pre-wrap"><%= cause_wrapper.full_trace.join("\n") %></pre>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Request & Response Details -->
+        <div class="border-t border-gray-200 pt-4 space-y-4">
+          <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Request</h3>
+
+          <div>
+            <p class="font-bold text-xs text-gray-600 mb-1">URL &amp; Method:</p>
+            <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs font-mono overflow-x-auto"><%= request.method %> <%= request.original_url %></pre>
+          </div>
+
+          <div>
+            <p class="font-bold text-xs text-gray-600 mb-1">Parameters:</p>
+            <%
+              clean_params = (request.filtered_parameters.clone rescue {})
+              clean_params.delete("action")
+              clean_params.delete("controller")
+              params_str = clean_params.empty? ? "None" : PP.pp(clean_params, +"", 200)
+            %>
+            <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap"><%= params_str %></pre>
+          </div>
+
+          <div>
+            <button type="button"
+                    onclick="document.getElementById('session_dump').classList.toggle('hidden')"
+                    class="text-xs font-bold text-red-700 hover:underline cursor-pointer">
+              Toggle session dump
+            </button>
+            <div id="session_dump" class="hidden mt-2">
+              <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap"><%= (request.session.to_hash.sort_by { |k, _| k.to_s }.map { |k, v| "#{k}: #{v.inspect rescue $!.message}" }.join("\n") rescue "None") %></pre>
+            </div>
+          </div>
+
+          <div>
+            <button type="button"
+                    onclick="document.getElementById('env_dump').classList.toggle('hidden')"
+                    class="text-xs font-bold text-red-700 hover:underline cursor-pointer">
+              Toggle env dump
+            </button>
+            <div id="env_dump" class="hidden mt-2">
+              <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap"><%= (request.env.slice(*request.class::ENV_METHODS).sort_by { |k, _| k.to_s }.map { |k, v| "#{k}: #{v.inspect rescue $!.message}" }.join("\n") rescue "None") %></pre>
+            </div>
+          </div>
+
+          <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider pt-2">Response</h3>
+          <div>
+            <p class="font-bold text-xs text-gray-600 mb-1">Headers:</p>
+            <pre class="bg-gray-50 border border-gray-200 rounded p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap"><%= response.headers.present? ? response.headers.inspect.gsub(",", ",\n") : "None" %></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+

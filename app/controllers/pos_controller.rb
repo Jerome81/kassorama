@@ -28,12 +28,27 @@ class PosController < ApplicationController
       @articles = articles.order(:name)
       flash.now[:notice] = "#{@articles.count} Ergebnisse für '#{params[:search_query]}' gefunden" if @articles.any?
     elsif @active_section
-      # Fetch articles manually assigned to the section
-      @articles = Article.where(status: 'active')
-                         .left_joins(:article_sections)
-                         .where("article_sections.section_id = ?", @active_section.id)
-                         .distinct
-                         .order("article_sections.sort_order ASC, articles.name ASC")
+      # Fetch articles manually assigned to the section as well as articles in a matching category
+      matching_category_ids = ArticleCategory.where("LOWER(TRIM(name)) = LOWER(TRIM(?))", @active_section.name.to_s).pluck(:id)
+
+      join_sql = ActiveRecord::Base.sanitize_sql_array([
+        "LEFT JOIN article_sections ON article_sections.article_id = articles.id AND article_sections.section_id = ?",
+        @active_section.id
+      ])
+
+      scope = Article.where(status: 'active').joins(join_sql)
+      if matching_category_ids.any?
+        scope = scope.where(
+          "article_sections.section_id = :section_id OR articles.article_category_id IN (:category_ids)",
+          section_id: @active_section.id,
+          category_ids: matching_category_ids
+        )
+      else
+        scope = scope.where("article_sections.section_id = ?", @active_section.id)
+      end
+
+      @articles = scope.distinct
+                       .order(Arel.sql("CASE WHEN article_sections.sort_order IS NULL THEN 1 ELSE 0 END ASC, article_sections.sort_order ASC, articles.name ASC"))
     else
       @articles = Article.where(status: 'active').order(:name)
     end
@@ -644,6 +659,36 @@ class PosController < ApplicationController
   end
 
   def park_order
+    if params[:target_order_id].present?
+      target_order = @cash_register.orders.parked.find(params[:target_order_id])
+
+      ActiveRecord::Base.transaction do
+        @order.order_items.includes(:article).each do |item|
+          if item.article&.price_type == 'free'
+            item.update!(order_id: target_order.id)
+          else
+            existing_item = target_order.order_items.find_by(article_id: item.article_id, variant_id: item.variant_id)
+            if existing_item
+              existing_item.quantity = (existing_item.quantity || 0) + item.quantity
+              existing_item.gross_price = existing_item.quantity * existing_item.unit_price
+              existing_item.discount = (existing_item.discount || 0) + (item.discount || 0)
+              existing_item.net_price = existing_item.gross_price - existing_item.discount
+              existing_item.save!
+              item.destroy!
+            else
+              item.update!(order_id: target_order.id)
+            end
+          end
+        end
+
+        @order.reload.destroy! if @order.persisted? && @order.id != target_order.id
+        target_order.update!(status: 'pending')
+      end
+
+      redirect_to pos_path(@cash_register, section_id: params[:section_id]), notice: "Artikel zu '#{target_order.name}' hinzugefügt."
+      return
+    end
+
     name = params[:name].presence || "#{ @cash_register.name } - #{ Time.current.strftime('%d.%m.%Y %H:%M') }"
     
     if @order.order_items.empty?
